@@ -1,0 +1,146 @@
+/* BANNER */
+
+.banner {
+    height: 75px;
+    margin: 0px -10px 10px;
+    background-color: rgb(66, 196, 247);
+    border-radius: 2px;
+}
+
+.banner h2 {
+    color: white;
+    padding-top: 10px;
+    margin-left: 2%;
+    display: inline-block;
+}
+
+.banner Img {
+    position: relative;
+    float: right;
+    right: 10px;
+    height: 75px;
+}
+
+/* LOGIN */
+
+.login {
+    border: 3px solid #f1f1f1;
+    margin: 5% 20%;
+}
+
+.login .msg {
+    text-align: center;
+    margin-top: auto;
+}
+
+.login #login_retour {
+    text-align: center;
+    color: red;
+}
+
+.login input[type="text"],
+input[type="password"] {
+    width: 95%;
+    padding: 12px 20px;
+    margin: 8px 2.5%;
+    display: inline-block;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+.login button {
+    background-color: #4caf50;
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 2%;
+    border: none;
+    cursor: pointer;
+    width: 96%;
+    text-align: center;
+    line-height: 0px;
+}
+
+.login button:hover {
+    opacity: 0.8;
+}
+
+.login .container {
+    padding: 16px;
+}
+
+/* PAGE-CONTENT */
+
+#page-content {
+    transition: 0.5s;
+}
+
+/* SIDE BAR */
+
+.sidenav {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    background-color: #111;
+    overflow-x: hidden;
+    transition: 0.5s;
+    padding-top: 60px;
+    margin-top: 80px;
+}
+
+.sidenav .title {
+    padding: 8px, 8px, 8px, 32px;
+    text-decoration: none;
+    text-align: center;
+    font-size: 30px;
+    color: #818181;
+    display: block;
+    transition: 0.3;
+}
+
+.sidenav .filtre > * {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 2%;
+    width: auto;
+}
+
+.sidenav .filtre .datePicker {
+    position: relative;
+    left: 8%;
+}
+
+#filtre-valid {
+    background-color: white;
+}
+
+.sidenav a:hover {
+    color: #f1f1f1;
+}
+
+#sideMenu-btn {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    border: 0px;
+    width: auto;
+    color: #eeeeee;
+    transition: all 0.5s;
+    cursor: pointer;
+    margin-left: -2%;
+}
+
+#sideMenu-btn img:last-child {
+    display: none;
+}
+
+#sideMenu-btn:hover img:last-child {
+    display: inline;
+}
+
+#sideMenu-btn:hover img:first-child {
+    display: none;
+}
