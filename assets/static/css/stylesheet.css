@@ -31,6 +31,7 @@
 .login .msg {
     text-align: center;
     margin-top: auto;
+    font-size: 30px;
 }
 
 .login #login_retour {
@@ -100,25 +101,16 @@ input[type="password"] {
     transition: 0.3;
 }
 
-.sidenav .filtre > * {
+/* .sidenav .filtre > * {
     display: block;
     margin-left: auto;
     margin-right: auto;
     margin-top: 2%;
     width: auto;
-}
-
-.sidenav .filtre .datePicker {
-    position: relative;
-    left: 8%;
-}
+} */
 
 #filtre-valid {
     background-color: white;
-}
-
-.sidenav a:hover {
-    color: #f1f1f1;
 }
 
 #sideMenu-btn {
@@ -127,7 +119,7 @@ input[type="password"] {
     z-index: 2;
     border: 0px;
     width: auto;
-    color: #eeeeee;
+    color: #000000;
     transition: all 0.5s;
     cursor: pointer;
     margin-left: -2%;

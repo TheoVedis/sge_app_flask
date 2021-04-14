@@ -19,7 +19,7 @@
         <div class="page-content">
             <div class="container"></div>
             <form class="login" action="/login" method="POST">
-                <div class="msg">Entrez vos identifiants de connexion.</div>
+                <h2 class="msg">Entrez vos identifiants de connexion.</h2>
                 <input
                     id="login_username"
                     type="text"
@@ -34,7 +34,7 @@
                     name="password"
                     required
                 />
-                <p id="login_msg"></p>
+                <p id="login_retour">{%if error%} {{ error }} {%endif%}</p>
                 <button type="submit">SE CONNECTER</button>
             </form>
         </div>
