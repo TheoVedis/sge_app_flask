@@ -51,7 +51,7 @@ input[type="password"] {
 
 .login button {
     background-color: #4caf50;
-    color: white;
+    color: rgb(145, 141, 141);
     padding: 14px 20px;
     margin: 8px 2%;
     border: none;
@@ -101,13 +101,13 @@ input[type="password"] {
     transition: 0.3;
 }
 
-/* .sidenav .filtre > * {
+.sidenav .filtre > * {
     display: block;
     margin-left: auto;
     margin-right: auto;
     margin-top: 2%;
     width: auto;
-} */
+}
 
 #filtre-valid {
     background-color: white;
@@ -117,12 +117,18 @@ input[type="password"] {
     position: absolute;
     top: 50%;
     z-index: 2;
-    border: 0px;
+    border: none;
     width: auto;
-    color: #000000;
+    color: transparent;
     transition: all 0.5s;
     cursor: pointer;
     margin-left: -2%;
+}
+
+#sideMenu-btn > * {
+    width: 30;
+    border: none;
+    color: transparent;
 }
 
 #sideMenu-btn img:last-child {

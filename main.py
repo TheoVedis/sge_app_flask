@@ -77,5 +77,13 @@ def login():
     )
 
 
+@app.route("/page/test", methods=["POST"])
+def test():
+    data = request.get_json()
+    for i in data["value"]:
+        print(i)
+    return json.dumps({"succes": True})
+
+
 if __name__ == "__main__":
     app.run(debug=True)
