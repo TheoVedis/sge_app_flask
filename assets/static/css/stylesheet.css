@@ -113,6 +113,15 @@ input[type="password"] {
     background-color: white;
 }
 
+.sidenav #picker {
+    width: 90%;
+    text-align: center;
+}
+
+.sidenav .filtre-name {
+    color: white;
+}
+
 #sideMenu-btn {
     position: absolute;
     top: 50%;
@@ -120,9 +129,11 @@ input[type="password"] {
     border: none;
     width: auto;
     color: transparent;
+    /* background-color: transparent; */
+    background: none;
     transition: all 0.5s;
     cursor: pointer;
-    margin-left: -2%;
+    margin-left: -0.5%;
 }
 
 #sideMenu-btn > * {

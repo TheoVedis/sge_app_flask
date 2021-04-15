@@ -34,29 +34,79 @@ function toArray(obj) {
 }
 
 $(document).ready(function () {
+    // Initialise le selecteur de date
+    $("#picker").daterangepicker({
+        autoApply: false,
+        timePicker: false,
+        startDate: "04/12/2019",
+        endDate: "05/12/2019",
+        locale: {
+            format: "DD/MM/YYYY",
+            applyClass: "btn-small btn-primary",
+            separator: " - ",
+            applyLabel: "OK",
+            fromLabel: "De",
+            toLabel: "à",
+            customRangeLabel: "custom",
+            daysOfWeek: ["Di", "Lu", "Ma", "Me", "Je", "Ve", "Sa"],
+            monthNames: [
+                "janvier",
+                "Fevrier",
+                "Mars",
+                "Avril",
+                "Mai",
+                "Juin",
+                "Juillet",
+                "Aout",
+                "Septembre",
+                "Octobre",
+                "Novembre",
+                "Decembre",
+            ],
+            firstDay: 1,
+        },
+    });
+
+    // Buton appliquer les filtres
     $("#filtre-btn").click(function (e) {
-        var val = $(".select2-selection__choice").map(function () {
+        // recuperation des Id_CPT
+        var Id_CPT = $(".select2-selection__choice").map(function () {
             return this.title;
         });
 
-        val = toArray(val);
+        Id_CPT = toArray(Id_CPT);
 
-        if (val.length == 0) {
+        if (Id_CPT.length == 0) {
+            //
             return;
         }
 
+        var startDate = $("#picker")
+            .data("daterangepicker")
+            .startDate.format("DD-MM-YYYY");
+        var endDate = $("#picker")
+            .data("daterangepicker")
+            .endDate.format("DD-MM-YYYY");
+
         $.ajax({
-            url: "/page/test",
+            url: "/applyFiltre",
             type: "POST",
             contentType: "application/json",
             data: JSON.stringify({
-                value: val,
+                value: Id_CPT,
+                startDate: startDate,
+                endDate: endDate,
             }),
-            succes: function (result) {
-                alert("SUCCES");
+            success: function (result, statut) {
+                alert("Hello");
+                // Plotly.newPlot("plot", result["plot"]);
+                Plotly.plot("plot", result["plot"], {});
             },
             error: function (result) {
                 alert("ERROR");
+            },
+            complete: function () {
+                // alert("ET LA ?");
             },
         });
     });

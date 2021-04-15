@@ -1,12 +1,13 @@
+from typing import List
 from flask import Flask, render_template, request, redirect, url_for, Markup, session
-import plotly
-import plotly.graph_objs as go
 
 import pandas as pd
 import numpy as np
+import datetime
 import json
 from package.login_manager import check_password, is_logged, msg_feedback
-from package.utility import random_secret_key
+from package.utility import graph, random_secret_key
+from package.data_base_manager import get_id_cpt
 
 app = Flask(
     __name__, static_folder="./assets/static/", template_folder="./assets/templates/"
@@ -35,9 +36,7 @@ def index(path):
     if not is_logged(session):
         return redirect(url_for("login"))
 
-    return render_template(
-        "dashboard.html", banner=Markup(render_template("banner.html"))
-    )
+    return dashboard()
 
 
 @app.route("/login", methods=["POST", "GET"])
@@ -77,12 +76,40 @@ def login():
     )
 
 
-@app.route("/page/test", methods=["POST"])
-def test():
+def dashboard():
+
+    id_cpt: str = "".join(
+        ['<option value="{}">{}</option>'.format(i, i) for i in get_id_cpt()]
+    )
+
+    return render_template(
+        "dashboard.html",
+        banner=Markup(render_template("banner.html")),
+        id_cpt=Markup(id_cpt),
+    )
+
+
+@app.route("/applyFiltre", methods=["POST"])
+def applyFiltre():
+    # recupération des données
     data = request.get_json()
-    for i in data["value"]:
-        print(i)
-    return json.dumps({"succes": True})
+
+    id_cpt: List[str] = data["value"]
+
+    # Format datetime ou str avoir avec la BD
+    start_date: datetime.datetime = datetime.datetime.strptime(
+        data["startDate"], "%d-%m-%Y"
+    )
+    end_date: datetime.datetime = datetime.datetime.strptime(
+        data["endDate"], "%d-%m-%Y"
+    )
+
+    plot = graph(id_cpt, start_date, end_date)
+
+    print(plot)
+    print("APPLY")
+    # 01/09/2008 - 01/10/2008
+    return json.dumps({"success": True, "plot": plot})
 
 
 if __name__ == "__main__":
