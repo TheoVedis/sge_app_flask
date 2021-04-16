@@ -113,33 +113,21 @@ input[type="password"] {
     background-color: white;
 }
 
-.sidenav #picker {
-    width: 90%;
-    text-align: center;
-}
-
-.sidenav .filtre-name {
-    color: white;
+.sidenav .filtre .datePicker {
+    position: relative;
+    left: 8%;
 }
 
 #sideMenu-btn {
     position: absolute;
     top: 50%;
     z-index: 2;
-    border: none;
+    border: 0px;
     width: auto;
-    color: transparent;
-    /* background-color: transparent; */
-    background: none;
+    color: #eeeeee;
     transition: all 0.5s;
     cursor: pointer;
-    margin-left: -0.5%;
-}
-
-#sideMenu-btn > * {
-    width: 30;
-    border: none;
-    color: transparent;
+    margin-left: -2%;
 }
 
 #sideMenu-btn img:last-child {

@@ -2,8 +2,7 @@
 Ce fichier va regrouper l'ensemble des fonctions de connexion
 """
 
-from flask import Markup
-from flask.globals import session
+# TODO garder en memoire les connexion et les deconnecter au bout d'un certrain temps
 
 account = {"test": "mdp", "test2": "mdp"}
 
