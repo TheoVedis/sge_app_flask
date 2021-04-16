@@ -63,3 +63,9 @@ def get_data(
 
 if __name__ == "__main__":
     print(get_id_cpt())
+    date = datetime.datetime.strptime("01-09-2008", "%d-%m-%Y")
+    date2 = datetime.datetime.strptime("01-10-2008", "%d-%m-%Y")
+
+    id_cpt = "EA0101"
+
+    print(get_data(id_cpt, date, date2))

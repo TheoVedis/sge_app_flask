@@ -3,8 +3,9 @@ Ce fichier va regrouper l'ensemble des fonctions de connexion
 """
 
 from flask import Markup
+from flask.globals import session
 
-account = {"test": "mdp"}
+account = {"test": "mdp", "test2": "mdp"}
 
 
 def is_logged(data: dict) -> bool:
