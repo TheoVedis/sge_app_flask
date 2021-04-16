@@ -35,6 +35,8 @@ def get_data(
     id_cpt, startDate: datetime.datetime, endDate: datetime.datetime
 ) -> pd.DataFrame:
     """Documentation
+    A partir d'une periode, d'un id de capteur, cette fonction va interroger la base de donneée
+
     Parametre:
         id_cpt: un id de capteur
         startDate: une date de départ

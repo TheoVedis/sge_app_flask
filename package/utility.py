@@ -4,6 +4,11 @@ Ce fichier va contenir toutes les fonctions utilitaires de ce projet.
 
 import datetime
 import random
+from typing import List
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objs as go
+from package.data_base_manager import get_data
 
 import dash
 
@@ -102,6 +107,39 @@ def random_secret_key(length: int, size: int = 500) -> str:
         key += chr(int(random.random() * size))
 
     return key
+
+
+def graph(id_cpt: List, start_date: str, end_date: str):
+    """Documentation
+    Crée les graphiques pour les afficher!
+    TODO: sortir les get_data() et garder que la partie graph pour eviter plusieur appel
+    """
+    fig = go.Figure()
+
+    for id in id_cpt:
+        data = get_data(
+            id,
+            datetime.datetime.strptime(start_date, "%Y-%m-%d"),
+            datetime.datetime.strptime(end_date, "%Y-%m-%d"),
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=data["TS"],
+                y=data["Value"],
+                mode="markers",
+                name=id,
+            )
+        )
+
+    fig.update_layout(
+        title="Valeurs des compteurs",
+        xaxis_title="Date (heure)",
+        yaxis_title="Valeur",
+        legend_title="Id Compteur:",
+        font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
+    )
+
+    return fig
 
 
 if __name__ == "__main__":

@@ -5,9 +5,9 @@ from dash.dependencies import ClientsideFunction, Input, Output, State
 from dash.exceptions import PreventUpdate
 from flask import Flask, Markup, redirect, render_template, request, session, url_for
 
-from package.data_base_manager import get_id_cpt
+from package.data_base_manager import get_data, get_id_cpt
 from package.login_manager import check_password, is_logged, msg_feedback
-from package.utility import dash_kwarg, random_secret_key
+from package.utility import dash_kwarg, graph, random_secret_key
 
 app = Flask(
     __name__, static_folder="./assets/static/", template_folder="./assets/templates/"
@@ -32,8 +32,8 @@ def index(path):
     """
     print("Hey INDEX")
 
-    if path != "":
-        return redirect(url_for(".index"))
+    # if path != "":
+    #     return redirect(url_for(".index"))
 
     if not is_logged(session):
         return redirect(url_for(".login"))
@@ -97,7 +97,7 @@ head = html.Div(
             children=[
                 html.H2("SGE_APP"),
                 html.Button(id="disconnect-btn", children=["deconnecter"], n_clicks=0),
-                html.Img(src="/assets/static/img/stock-icon.png"),
+                html.Img(src="./assets/static/img/stock-icon.png"),
             ],
             className="banner",
         ),
@@ -124,37 +124,82 @@ layout_main = html.Div(
                     className="filtre",
                     children=[
                         dcc.Dropdown(id="select-id_cpt", multi=True),
-                        dcc.DatePickerRange(className="datePicker"),
+                        dcc.DatePickerRange(
+                            id="date-range-picker",
+                            className="datePicker",
+                            display_format="DD/MM/YYYY",
+                        ),
                         html.Button(id="filtre-valid", children="valid"),
                     ],
                 ),
             ],
         ),
+        html.Div(id="dashboard", children=[dcc.Graph(id="graph", figure={})]),
     ],
 )
 
 
 dash_app.layout = html.Div(children=[head, layout_main])
 
-outputs = [Output("url", "pathname"), Output("select-id_cpt", "options")]
-inputs = [Input("disconnect-btn", "n_clicks")]
-states = []
+outputs = [
+    Output("url", "pathname"),
+    Output("select-id_cpt", "options"),
+    Output("graph", "figure"),
+]
+inputs = [Input("disconnect-btn", "n_clicks"), Input("filtre-valid", "n_clicks")]
+states = [
+    State("select-id_cpt", "value"),
+    State("date-range-picker", "end_date"),
+    State("date-range-picker", "start_date"),
+]
 
-# Use the same session var work
+
 @dash_app.callback(outputs, inputs, states)
 @dash_kwarg(outputs, inputs, states)
 def dashboard_manager(outputs, inputs, trigger):
+    """Documentation
+    Gestionnaire principal des callbacks pour le tableau de bord.
+    Avec les declencheurs (trigger)
 
+    Parametre:
+        outputs: Dictionnaire des variables de sortie initialisé a la valeur dash.no_update
+            format ouputs[component_id][component_property]
+        inputs: Dictionnaire des variables d'entrée (déclencheur (trigger) et les statiques (states)) avec leur valeur
+            format inputs[component_id][component_property]
+        trigger: Dictionnaire du composant déclencheur
+            trigger["id"] => component_id.component_property ex: "url.pathname"
+            trigger["value"] => valeur du composant ex: '/login'
+
+    Sortie:
+        outputs: Avec des variables modifiées ou des dash.no_update (par defaut)
+    """
     print("TRIGGER:", trigger)
 
+    # Quand la page charge
     if trigger["id"] == ".":
+        # Si pas connecter on le renvoie a la page de connexion
         if not is_logged(session):
-            outputs["url"]["pathname"] = ""
+            outputs["url"]["pathname"] = "/login"
+            return outputs
+
+        # recupération des id_cpt pour le selecteur
+        outputs["select-id_cpt"]["options"] = [
+            {"label": i, "value": i} for i in get_id_cpt()
+        ]
+
+        return outputs
 
     if trigger["id"] == "disconnect-btn.n_clicks":
-        outputs = disconnect(outputs, inputs)
+        return disconnect(outputs, inputs)
 
-    print(outputs)
+    if trigger["id"] == "filtre-valid.n_clicks":
+        # TODO le graph
+        outputs["graph"]["figure"] = graph(
+            inputs["select-id_cpt"]["value"],
+            inputs["date-range-picker"]["start_date"],
+            inputs["date-range-picker"]["end_date"],
+        )
+
     return outputs
 
 
@@ -167,7 +212,7 @@ def disconnect(outputs, inputs):
 
     # TODO l'action de la deconnexion
     # Redirection
-    outputs["url"]["pathname"] = ""
+    outputs["url"]["pathname"] = "/login"
     session["is_logged"] = False
     return outputs
 
@@ -179,5 +224,5 @@ dash_app.clientside_callback(
 )
 
 if __name__ == "__main__":
-    # dash_app.enable_dev_tools(debug=True)
+    dash_app.enable_dev_tools(debug=True)
     app.run(debug=True)
