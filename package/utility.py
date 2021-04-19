@@ -133,6 +133,10 @@ def graph(id_cpt: List, data: pd.DataFrame, x="TS", y="Value") -> go.Figure:
                 y=sub_data["Value"],
                 mode="markers",
                 name=id,
+                customdata=[
+                    i for i in data[data["Id_CPT"] == id].index
+                ],  # Utile pour jointure avec le tableau
+                # hovertemplate="index: %{customdata} <br><b>x:%{x}</b><br>y:%{y}",
             )
         )
 
@@ -160,8 +164,14 @@ def table(data: pd.DataFrame, columns: List[str] = None):
         outputs["table"]["data"]: Format pour l'affichage des données
     """
     columns = columns or list(data.columns)
+    columns = ["Index"] + columns
 
-    return [{"name": i, "id": i} for i in columns], data[columns].to_dict("records")
+    data["Index"] = data.index
+
+    val = data[columns].to_dict("records")
+    # print(val)
+
+    return [{"name": i, "id": i} for i in columns], val
 
 
 if __name__ == "__main__":

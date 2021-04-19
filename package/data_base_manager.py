@@ -56,7 +56,8 @@ def get_data(
         + endDate.strftime("%d/%m/%Y")
         + "' and Id_CPT in ('"
         + "','".join(id_cpt)
-        + "')",
+        + "')"
+        + " order by TS, Id_CPT",
         conn,
     )
 

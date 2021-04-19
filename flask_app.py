@@ -165,6 +165,12 @@ layout_main = html.Div(
                     # ],
                     page_size=30,
                     row_selectable="multi",
+                    style_header_conditional=[
+                        {"if": {"column_id": "Index"}, "display": "None"}
+                    ],
+                    style_data_conditional=[
+                        {"if": {"column_id": "Index"}, "display": "None"}
+                    ],
                 ),
             ],
         ),
@@ -263,24 +269,28 @@ def dashboard_manager(outputs, inputs, trigger):
 
     # Mise en evidence des points selectionner sur le graph
     if trigger["id"] == "graph.selectedData":
-        style = {"display": "flex"}
-        style_cond = []
+        style_cond = [{"if": {"column_id": "Index"}, "display": "None"}]
         if inputs["graph"]["selectedData"] is None:
             pass
         else:
-            style["display"] = "none"
             for point in inputs["graph"]["selectedData"]["points"]:
                 style_cond += [
                     {
-                        "if": {"row_index": point["pointIndex"]},
-                        "display": "",
+                        "if": {
+                            # "column_id": "Index",
+                            "filter_query": "{{Index}} = {}".format(
+                                point["customdata"]
+                            ),
+                        },
+                        "backgroundColor": "rgb(255, 255, 0)",
+                        "color": "black",
                     }
                 ]
-            print("HEYYYYYY")
-        # print(inputs["table"]["data"])
 
         outputs["table"]["style_data_conditional"] = style_cond
-        outputs["table"]["style_data"] = style
+
+        # TODO Cacher des colonne en fonction de l'utilisateur? ou changer la requete
+        # Colonne index utile pour la jointure entre le graph et le tableau
 
         return outputs
 
@@ -291,6 +301,13 @@ def dashboard_manager(outputs, inputs, trigger):
 def disconnect(outputs, inputs):
     """Documentation
     Deconnect l'utilisteurs, clear les variables de session ect..
+
+    Parameter:
+        outputs: Dictionnaire des sorties format callback
+        inputs: Dictionnaire des entrées format callback
+
+    Sortie:
+        outputs: Les sorties mises a jours
     """
     if inputs["disconnect-btn"]["n_clicks"] == 0:
         raise PreventUpdate
