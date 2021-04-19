@@ -1,13 +1,14 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_table as dt
 from dash.dependencies import ClientsideFunction, Input, Output, State
 from dash.exceptions import PreventUpdate
 from flask import Flask, Markup, redirect, render_template, request, session, url_for
-
+import datetime
 from package.data_base_manager import get_data, get_id_cpt
 from package.login_manager import check_password, is_logged, msg_feedback
-from package.utility import dash_kwarg, graph, random_secret_key
+from package.utility import dash_kwarg, graph, random_secret_key, table
 
 app = Flask(
     __name__, static_folder="./assets/static/", template_folder="./assets/templates/"
@@ -128,13 +129,45 @@ layout_main = html.Div(
                             id="date-range-picker",
                             className="datePicker",
                             display_format="DD/MM/YYYY",
+                            start_date="2008-09-01",  # TODO a enlever juste pour faire des test plus rapidement
+                            end_date="2008-09-02",
                         ),
                         html.Button(id="filtre-valid", children="valid"),
                     ],
                 ),
             ],
         ),
-        html.Div(id="dashboard", children=[dcc.Graph(id="graph", figure={})]),
+        html.Div(
+            id="dashboard",
+            children=[
+                dcc.Graph(id="graph", figure={}),
+                dt.DataTable(
+                    id="table",
+                    # columns=[{"name": i, "id": i} for i in data.columns],
+                    # data=data.to_dict("records"),
+                    sort_action="native",
+                    style_as_list_view=True,
+                    style_cell={"padding": "5px"},
+                    style_header={
+                        "backgroundColor": "rgb(230, 230, 230)",
+                        "fontWeight": "bold",
+                    },
+                    # style_data_conditional=[  # mettre en valeur les pts anormaux
+                    #     {"if": {"row_index": "odd"}, "backgroundColor": "rgb(248, 248, 248)"},
+                    #     {
+                    #         "if": {
+                    #             "filter_query": "{Value} > 6317498",
+                    #             "column_id": "Value",
+                    #         },
+                    #         "backgroundColor": "tomato",
+                    #         "color": "white",
+                    #     },
+                    # ],
+                    page_size=30,
+                    row_selectable="multi",
+                ),
+            ],
+        ),
     ],
 )
 
@@ -145,12 +178,22 @@ outputs = [
     Output("url", "pathname"),
     Output("select-id_cpt", "options"),
     Output("graph", "figure"),
+    Output("table", "style_data_conditional"),
+    Output("table", "columns"),
+    Output("table", "data"),
+    Output("table", "style_cell_conditional"),
+    Output("table", "style_data"),
 ]
-inputs = [Input("disconnect-btn", "n_clicks"), Input("filtre-valid", "n_clicks")]
+inputs = [
+    Input("disconnect-btn", "n_clicks"),
+    Input("filtre-valid", "n_clicks"),
+    Input("graph", "selectedData"),
+]
 states = [
     State("select-id_cpt", "value"),
     State("date-range-picker", "end_date"),
     State("date-range-picker", "start_date"),
+    State("table", "data"),
 ]
 
 
@@ -189,18 +232,60 @@ def dashboard_manager(outputs, inputs, trigger):
 
         return outputs
 
+    # Bouton deconnecter
     if trigger["id"] == "disconnect-btn.n_clicks":
         return disconnect(outputs, inputs)
 
+    # Bouton validation des filtres
     if trigger["id"] == "filtre-valid.n_clicks":
-        # TODO le graph
-        outputs["graph"]["figure"] = graph(
-            inputs["select-id_cpt"]["value"],
-            inputs["date-range-picker"]["start_date"],
-            inputs["date-range-picker"]["end_date"],
-        )
+        if (
+            inputs["date-range-picker"]["start_date"] is None
+            or inputs["date-range-picker"]["end_date"] is None
+        ):
+            # TODO message d'erreur ou plage par defaut ? (ex: toutes les valeurs risque trop de données)
+            raise PreventUpdate
 
-    return outputs
+        data = get_data(
+            inputs["select-id_cpt"]["value"],
+            datetime.datetime.strptime(
+                inputs["date-range-picker"]["start_date"], "%Y-%m-%d"
+            ),
+            datetime.datetime.strptime(
+                inputs["date-range-picker"]["end_date"], "%Y-%m-%d"
+            ),
+        )
+        outputs["graph"]["figure"] = graph(inputs["select-id_cpt"]["value"], data)
+
+        # Tableau
+        outputs["table"]["columns"], outputs["table"]["data"] = table(data)
+
+        return outputs
+
+    # Mise en evidence des points selectionner sur le graph
+    if trigger["id"] == "graph.selectedData":
+        style = {"display": "flex"}
+        style_cond = []
+        if inputs["graph"]["selectedData"] is None:
+            pass
+        else:
+            style["display"] = "none"
+            for point in inputs["graph"]["selectedData"]["points"]:
+                style_cond += [
+                    {
+                        "if": {"row_index": point["pointIndex"]},
+                        "display": "",
+                    }
+                ]
+            print("HEYYYYYY")
+        # print(inputs["table"]["data"])
+
+        outputs["table"]["style_data_conditional"] = style_cond
+        outputs["table"]["style_data"] = style
+
+        return outputs
+
+    print("TRIGGER non géré !")
+    raise PreventUpdate
 
 
 def disconnect(outputs, inputs):
@@ -217,6 +302,10 @@ def disconnect(outputs, inputs):
     return outputs
 
 
+# Callback côté client qui gere l'ouverture et la fermeture du menu des filtres
+# namespace represente un groupe de fonction
+# function_name : le nom de la fonction a executer
+# Emplacement script.js
 dash_app.clientside_callback(
     ClientsideFunction(namespace="clientside", function_name="openNav"),
     Output("sideMenu", "hidden"),

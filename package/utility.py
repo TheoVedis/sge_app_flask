@@ -109,23 +109,28 @@ def random_secret_key(length: int, size: int = 500) -> str:
     return key
 
 
-def graph(id_cpt: List, start_date: str, end_date: str):
+def graph(id_cpt: List, data: pd.DataFrame, x="TS", y="Value") -> go.Figure:
     """Documentation
     Crée les graphiques pour les afficher!
-    TODO: sortir les get_data() et garder que la partie graph pour eviter plusieur appel
+
+    Parametre:
+        id_cpt: List des id des compteurs
+        data: Dataframe des données associé a chaque compteurs
+        x: La variable en abscisse (par defaut TS: le temps)
+        y: La variable en hauteur ()
+
+    Sortie:
+        fig: Un magnifique graphgique
+
     """
     fig = go.Figure()
 
     for id in id_cpt:
-        data = get_data(
-            id,
-            datetime.datetime.strptime(start_date, "%Y-%m-%d"),
-            datetime.datetime.strptime(end_date, "%Y-%m-%d"),
-        )
+        sub_data = data[data["Id_CPT"] == id]
         fig.add_trace(
             go.Scatter(
-                x=data["TS"],
-                y=data["Value"],
+                x=sub_data["TS"],
+                y=sub_data["Value"],
                 mode="markers",
                 name=id,
             )
@@ -140,6 +145,23 @@ def graph(id_cpt: List, start_date: str, end_date: str):
     )
 
     return fig
+
+
+def table(data: pd.DataFrame, columns: List[str] = None):
+    """Documentation
+    Mets en forme les données pour créer le tableau de valeurs
+
+    Parametre:
+        data: Dataframe des données associé a chaque compteurs
+        columns: Nom des colonnes a garder toute si pas spécifié
+
+    Sortie:
+        outputs["table"]["columns"]: Format pour l'affichage des entêtes des columns
+        outputs["table"]["data"]: Format pour l'affichage des données
+    """
+    columns = columns or list(data.columns)
+
+    return [{"name": i, "id": i} for i in columns], data[columns].to_dict("records")
 
 
 if __name__ == "__main__":
