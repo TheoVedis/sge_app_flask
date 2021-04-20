@@ -4,16 +4,20 @@ Ce fichier va contenir toutes les fonctions utilitaires de ce projet.
 
 import datetime
 import random
-from typing import List
+from typing import Any, Callable, Dict, List, Union
 import pandas as pd
-import plotly.express as px
+
+# import plotly.express as px
 import plotly.graph_objs as go
-from package.data_base_manager import get_data
+
 
 import dash
+from dash.dependencies import Input, Output, State
 
 
-def dash_kwarg(outputs, inputs, states):
+def dash_kwarg(
+    outputs: List[Output], inputs: List[Input], states: List[State]
+) -> Callable:
     """Documentation
     S'applique apres un callback pour donner plusieur parametre a la fonction.
     Ordonne les parametres sous forme de dictionnaire.
@@ -32,39 +36,42 @@ def dash_kwarg(outputs, inputs, states):
                 print("context callback > 1 ? POSSIBLE ?!")
 
             if ctx:
-                trigger = {
+                trigger: Dict[str, Any] = {
                     "id": ctx.triggered[0]["prop_id"],
                     "value": ctx.triggered[0]["value"],
                 }
             else:
-                trigger = (None, None)
+                trigger = {
+                    "id": None,
+                    "value": None,
+                }
                 print("ERROR ?")
 
             out_dict = {}
             for item in outputs:
                 try:
-                    out_dict[item.component_id][
-                        item.component_property
+                    out_dict[item.component_id][  # type: ignore
+                        item.component_property  # type: ignore
                     ] = dash.no_update
                 except KeyError:
-                    out_dict[item.component_id] = {
-                        item.component_property: dash.no_update
+                    out_dict[item.component_id] = {  # type: ignore
+                        item.component_property: dash.no_update  # type: ignore
                     }
 
             ind = 0
             input_dict = {}
             for item in inputs:
                 try:
-                    input_dict[item.component_id][item.component_property] = args[ind]
+                    input_dict[item.component_id][item.component_property] = args[ind]  # type: ignore
                 except KeyError:
-                    input_dict[item.component_id] = {item.component_property: args[ind]}
+                    input_dict[item.component_id] = {item.component_property: args[ind]}  # type: ignore
                 ind += 1
 
             for item in states:
                 try:
-                    input_dict[item.component_id][item.component_property] = args[ind]
+                    input_dict[item.component_id][item.component_property] = args[ind]  # type: ignore
                 except KeyError:
-                    input_dict[item.component_id] = {item.component_property: args[ind]}
+                    input_dict[item.component_id] = {item.component_property: args[ind]}  # type: ignore
                 ind += 1
 
             kwargs_dict = {
@@ -79,7 +86,7 @@ def dash_kwarg(outputs, inputs, states):
     return accept_func
 
 
-def dash_return(outputs: dict):
+def dash_return(outputs: Dict[str, Dict[str, Any]]):
     """Documentation
     Mise en forme des sorties pour correspondre aux attentes de Dash
 
@@ -89,7 +96,7 @@ def dash_return(outputs: dict):
     Sortie:
         listes des sorties et de leur valeur
     """
-    out = []
+    out: List[Any] = []
     for component_id in outputs:
         for component_property in outputs[component_id]:
             out.append(outputs[component_id][component_property])
@@ -109,7 +116,9 @@ def random_secret_key(length: int, size: int = 500) -> str:
     return key
 
 
-def graph(id_cpt: List, data: pd.DataFrame, x="TS", y="Value") -> go.Figure:
+def graph(
+    id_cpt: List[str], data: pd.DataFrame, x: str = "TS", y: str = "Value"
+) -> go.Figure:
     """Documentation
     Crée les graphiques pour les afficher!
 
@@ -151,7 +160,7 @@ def graph(id_cpt: List, data: pd.DataFrame, x="TS", y="Value") -> go.Figure:
     return fig
 
 
-def table(data: pd.DataFrame, columns: List[str] = None):
+def table(data: pd.DataFrame, columns: Union[List[str], None] = None):
     """Documentation
     Mets en forme les données pour créer le tableau de valeurs
 

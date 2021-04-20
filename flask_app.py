@@ -1,3 +1,4 @@
+from typing import Any, Dict
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -19,7 +20,7 @@ app.secret_key = random_secret_key(123)
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
-def index(path):
+def index(path: str):
     """Documentation
     Redirige les utilisateurs
         soit vers la page de login
@@ -57,8 +58,8 @@ def login():
 
     if request.method == "POST":
         # Acces via le bouton du formulaire de connexion
-        username = request.form["username"]
-        password = request.form["password"]
+        username: str = request.form["username"]
+        password: str = request.form["password"]
 
         print("ID:", username, "/", password)
 
@@ -205,7 +206,11 @@ states = [
 
 @dash_app.callback(outputs, inputs, states)
 @dash_kwarg(outputs, inputs, states)
-def dashboard_manager(outputs, inputs, trigger):
+def dashboard_manager(
+    outputs: Dict[str, Dict[str, Any]],
+    inputs: Dict[str, Dict[str, Any]],
+    trigger: Dict[str, Any],
+) -> Dict[str, Dict[str, Any]]:
     """Documentation
     Gestionnaire principal des callbacks pour le tableau de bord.
     Avec les declencheurs (trigger)
@@ -298,7 +303,7 @@ def dashboard_manager(outputs, inputs, trigger):
     raise PreventUpdate
 
 
-def disconnect(outputs, inputs):
+def disconnect(outputs: Dict[str, Dict[str, Any]], inputs: Dict[str, Dict[str, Any]]):
     """Documentation
     Deconnect l'utilisteurs, clear les variables de session ect..
 

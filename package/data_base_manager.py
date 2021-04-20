@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 import pyodbc
 import pandas as pd
 import datetime
@@ -12,10 +12,11 @@ conn: pyodbc.Connection = pyodbc.connect(
 )
 
 
-def get_id_cpt(client: str = None) -> List[str]:
+def get_id_cpt(client: Union[str, None] = None) -> List[str]:
     """Documentation
     Parametre:
         client: le nom du client, du compte connecté s'il doit être restreint
+        # TODO enlever le None
 
     Sortie:
         la liste des id des compteurs
@@ -32,13 +33,13 @@ def get_id_cpt(client: str = None) -> List[str]:
 
 
 def get_data(
-    id_cpt, startDate: datetime.datetime, endDate: datetime.datetime
+    id_cpt: List[str], startDate: datetime.datetime, endDate: datetime.datetime
 ) -> pd.DataFrame:
     """Documentation
     A partir d'une periode, d'un id de capteur, cette fonction va interroger la base de donneée
 
     Parametre:
-        id_cpt: un id de capteur
+        id_cpt: une list d'id de compteur
         startDate: une date de départ
         endDate: une date d'arrive < startDate
 

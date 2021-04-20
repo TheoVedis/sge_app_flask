@@ -4,10 +4,13 @@ Ce fichier va regrouper l'ensemble des fonctions de connexion
 
 # TODO garder en memoire les connexion et les deconnecter au bout d'un certrain temps
 
+from typing import Any, Dict
+
+
 account = {"test": "mdp", "test2": "mdp"}
 
 
-def is_logged(data: dict) -> bool:
+def is_logged(data: Dict[str, Any]) -> bool:
     """Documentation
     Verifie si un utilisateur est connecté.
 
