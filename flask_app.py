@@ -10,6 +10,7 @@ import datetime
 from package.data_base_manager import get_data, get_id_cpt
 from package.login_manager import check_password, is_logged, msg_feedback
 from package.utility import dash_kwarg, graph, random_secret_key, table
+import pandas as pd
 
 app = Flask(
     __name__, static_folder="./assets/static/", template_folder="./assets/templates/"
@@ -131,8 +132,10 @@ layout_main = html.Div(
                             className="datePicker",
                             display_format="DD/MM/YYYY",
                             start_date="2008-09-01",  # TODO a enlever juste pour faire des test plus rapidement
-                            end_date="2008-09-02",
+                            end_date="2008-09-02",  # Valeur par defaut?
                         ),
+                        # dcc.Dropdown(id="select-periode", multi=False, options=["Jour"]),
+                        html.H3("Heylo"),
                         html.Button(id="filtre-valid", children="valid"),
                     ],
                 ),
@@ -141,36 +144,92 @@ layout_main = html.Div(
         html.Div(
             id="dashboard",
             children=[
-                dcc.Graph(id="graph", figure={}),
-                dt.DataTable(
-                    id="table",
-                    # columns=[{"name": i, "id": i} for i in data.columns],
-                    # data=data.to_dict("records"),
-                    sort_action="native",
-                    style_as_list_view=True,
-                    style_cell={"padding": "5px"},
-                    style_header={
-                        "backgroundColor": "rgb(230, 230, 230)",
-                        "fontWeight": "bold",
-                    },
-                    # style_data_conditional=[  # mettre en valeur les pts anormaux
-                    #     {"if": {"row_index": "odd"}, "backgroundColor": "rgb(248, 248, 248)"},
-                    #     {
-                    #         "if": {
-                    #             "filter_query": "{Value} > 6317498",
-                    #             "column_id": "Value",
-                    #         },
-                    #         "backgroundColor": "tomato",
-                    #         "color": "white",
-                    #     },
-                    # ],
-                    page_size=30,
-                    row_selectable="multi",
-                    style_header_conditional=[
-                        {"if": {"column_id": "Index"}, "display": "None"}
-                    ],
-                    style_data_conditional=[
-                        {"if": {"column_id": "Index"}, "display": "None"}
+                dcc.Tabs(
+                    id="tabs",
+                    value="tab1",
+                    children=[
+                        dcc.Tab(
+                            label="Valeur Index",
+                            value="tab1",
+                            children=[
+                                dcc.Graph(id="graph", figure={}),
+                                dt.DataTable(
+                                    id="table",
+                                    # columns=[{"name": i, "id": i} for i in data.columns],
+                                    # data=data.to_dict("records"),
+                                    export_format="csv",  # TODO Download CSV auto ou créer une flask route (possibilité de choisir les lignes plus précisement?) avec un href ?
+                                    sort_action="native",
+                                    style_as_list_view=True,
+                                    style_cell={"padding": "5px"},
+                                    style_header={
+                                        "backgroundColor": "rgb(230, 230, 230)",
+                                        "fontWeight": "bold",
+                                    },
+                                    # style_data_conditional=[  # mettre en valeur les pts anormaux
+                                    #     {"if": {"row_index": "odd"}, "backgroundColor": "rgb(248, 248, 248)"},
+                                    #     {
+                                    #         "if": {
+                                    #             "filter_query": "{Value} > 6317498",
+                                    #             "column_id": "Value",
+                                    #         },
+                                    #         "backgroundColor": "tomato",
+                                    #         "color": "white",
+                                    #     },
+                                    # ],
+                                    page_size=30,
+                                    row_selectable="multi",
+                                    style_header_conditional=[
+                                        {
+                                            "if": {"column_id": "Index"},
+                                            "display": "None",
+                                        }
+                                    ],
+                                    style_data_conditional=[
+                                        {
+                                            "if": {"column_id": "Index"},
+                                            "display": "None",
+                                        }
+                                    ],
+                                ),
+                            ],
+                        ),
+                        dcc.Tab(
+                            label="Consomation",
+                            value="tab2",
+                            children=[
+                                dcc.Graph(id="graph2", figure={}),
+                                dt.DataTable(
+                                    id="table2",
+                                    export_format="csv",  # TODO Download CSV auto ou créer une flask route (possibilité de choisir les lignes plus précisement?) avec un href ?
+                                    sort_action="native",
+                                    style_as_list_view=True,
+                                    style_cell={"padding": "5px"},
+                                    style_header={
+                                        "backgroundColor": "rgb(230, 230, 230)",
+                                        "fontWeight": "bold",
+                                    },
+                                    page_size=30,
+                                    row_selectable="multi",
+                                    style_header_conditional=[
+                                        {
+                                            "if": {"column_id": "Index"},
+                                            "display": "None",
+                                        }
+                                    ],
+                                    style_data_conditional=[
+                                        {
+                                            "if": {"column_id": "Index"},
+                                            "display": "None",
+                                        }
+                                    ],
+                                ),
+                            ],
+                        ),
+                        dcc.Tab(
+                            label="Information",
+                            value="tab3",
+                            children=["Hey la page 3"],
+                        ),
                     ],
                 ),
             ],
@@ -184,12 +243,18 @@ dash_app.layout = html.Div(children=[head, layout_main])
 outputs = [
     Output("url", "pathname"),
     Output("select-id_cpt", "options"),
+    ############# Tab1 #############
     Output("graph", "figure"),
     Output("table", "style_data_conditional"),
     Output("table", "columns"),
     Output("table", "data"),
-    Output("table", "style_cell_conditional"),
     Output("table", "style_data"),
+    ############# Tab2 #############
+    Output("graph2", "figure"),
+    Output("table2", "style_data_conditional"),
+    Output("table2", "columns"),
+    Output("table2", "data"),
+    Output("table2", "style_data"),
 ]
 inputs = [
     Input("disconnect-btn", "n_clicks"),
@@ -256,7 +321,8 @@ def dashboard_manager(
             # TODO message d'erreur ou plage par defaut ? (ex: toutes les valeurs risque trop de données)
             raise PreventUpdate
 
-        data = get_data(
+        # Tab 1:
+        data: pd.DataFram = get_data(
             inputs["select-id_cpt"]["value"],
             datetime.datetime.strptime(
                 inputs["date-range-picker"]["start_date"], "%Y-%m-%d"
@@ -269,6 +335,9 @@ def dashboard_manager(
 
         # Tableau
         outputs["table"]["columns"], outputs["table"]["data"] = table(data)
+
+        # Tab2:
+        data
 
         return outputs
 
