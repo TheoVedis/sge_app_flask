@@ -23,18 +23,18 @@ def get_id_cpt(client: Union[str, None] = None) -> List[str]:
     """
 
     # A REMETTRE pour selectionner les ID_CPT
-    # data: pd.DataFrame = pd.read_sql_query(
-    #     "select distinct Id_CPT from Test.dbo.Histo"
-    #     # "where Nom_client = '" + client + "'", # TODO A rajouter une fois la base client intégré
-    #     " order by Id_CPT",
-    #     conn,
-    # )
-
     data: pd.DataFrame = pd.read_sql_query(
-        "select distinct name from Test.dbo.extratanomalies order by name", conn
+        "select distinct Id_CPT from Test.dbo.Histo"
+        # "where Nom_client = '" + client + "'", # TODO A rajouter une fois la base client intégré
+        " order by Id_CPT",
+        conn,
     )
 
-    return list(data["name"])
+    # data: pd.DataFrame = pd.read_sql_query(
+    #     "select distinct name from Test.dbo.extratanomalies order by name", conn
+    # )
+
+    return list(data["Id_CPT"])
 
 
 def get_data(
@@ -54,34 +54,34 @@ def get_data(
     """
 
     # Requete sur la base classique
-    # data: pd.DataFrame = pd.read_sql_query(
-    #     "select * from"
-    #     " Test.dbo.Histo"
-    #     " where TS >= '"
-    #     + startDate.strftime("%d/%m/%Y")
-    #     + "' and TS <= '"
-    #     + endDate.strftime("%d/%m/%Y")
-    #     + "' and Id_CPT in ('"
-    #     + "','".join(id_cpt)
-    #     + "')"
-    #     + " order by TS, Id_CPT",
-    #     conn,
-    # )
-
-    # Requete sur la base avec les anomalies
     data: pd.DataFrame = pd.read_sql_query(
-        "select Chrono, Name Id_CPT, Value, Quality, TS, Anomalie, Type_Anomalie from"
-        " Test.dbo.extratanomalies"
+        "select * from"
+        " Test.dbo.Histo"
         " where TS >= '"
         + startDate.strftime("%d/%m/%Y")
         + "' and TS <= '"
         + endDate.strftime("%d/%m/%Y")
-        + "' and name in ('"
+        + "' and Id_CPT in ('"
         + "','".join(id_cpt)
         + "')"
-        + " order by TS, name",
+        + " order by TS, Id_CPT",
         conn,
     )
+
+    # Requete sur la base avec les anomalies
+    # data: pd.DataFrame = pd.read_sql_query(
+    #     "select Chrono, Name Id_CPT, Value, Quality, TS, Anomalie, Type_Anomalie from"
+    #     " Test.dbo.extratanomalies"
+    #     " where TS >= '"
+    #     + startDate.strftime("%d/%m/%Y")
+    #     + "' and TS <= '"
+    #     + endDate.strftime("%d/%m/%Y")
+    #     + "' and name in ('"
+    #     + "','".join(id_cpt)
+    #     + "')"
+    #     + " order by TS, name",
+    #     conn,
+    # )
 
     return data
 
@@ -130,7 +130,7 @@ def get_conso(
 
 
 if __name__ == "__main__":
-    # print(get_id_cpt())
+    print(get_id_cpt())
     date = datetime.datetime.strptime("01-09-2008", "%d-%m-%Y")
     date2 = datetime.datetime.strptime("01-10-2008", "%d-%m-%Y")
 

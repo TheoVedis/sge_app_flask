@@ -156,16 +156,18 @@ def graph(
                         [
                             i for i in data[data["Id_CPT"] == id].index
                         ],  # Utile pour jointure avec le tableau
-                        [i for i in data[data["Id_CPT"] == id]["Type_Anomalie"]],
+                        # TODO A remettre une fois la BD propre avec les anomalie
+                        # [i for i in data[data["Id_CPT"] == id]["Type_Anomalie"]],
                     )
                 ),
-                marker=dict(
-                    color=[
-                        "rgba(0, 0, 255, 1)" if i == "Normal" else "rgba(255, 0, 0, 1)"
-                        for i in data[data["Id_CPT"] == id]["Type_Anomalie"]
-                    ]
-                ),
-                hovertemplate="Anomalie: %{customdata[1]}",
+                # TODO A remettre une fois la BD propre avec les anomalie
+                # marker=dict(
+                #     color=[
+                #         "rgba(0, 0, 255, 1)" if i == "Normal" else "rgba(255, 0, 0, 1)"
+                #         for i in data[data["Id_CPT"] == id]["Type_Anomalie"]
+                #     ]
+                # ),
+                # hovertemplate="Anomalie: %{customdata[1]}",
             )
         )
 

@@ -205,10 +205,11 @@ layout_main = html.Div(
                                         }
                                     ],
                                     style_data_conditional=[
-                                        {
-                                            "if": {"column_id": "Index"},
-                                            "display": "None",
-                                        }
+                                        # Probleme cacher la colonne index décale les filtres
+                                        # {
+                                        #     "if": {"column_id": "Index"},
+                                        #     "display": "None",
+                                        # }
                                     ],
                                 ),
                             ],
@@ -222,7 +223,7 @@ layout_main = html.Div(
                                     id="table2",
                                     export_format="csv",  # TODO Download CSV auto ou créer une flask route (possibilité de choisir les lignes plus précisement?) avec un href ?
                                     sort_action="native",
-                                    filter_action="native",
+                                    # filter_action="native",
                                     style_as_list_view=True,
                                     style_cell={"padding": "5px"},
                                     style_header={
@@ -238,10 +239,11 @@ layout_main = html.Div(
                                         }
                                     ],
                                     style_data_conditional=[
-                                        {
-                                            "if": {"column_id": "Index"},
-                                            "display": "None",
-                                        }
+                                        # Probleme cacher la colonne index décale les filtres
+                                        # {
+                                        #     "if": {"column_id": "Index"},
+                                        #     "display": "None",
+                                        # }
                                     ],
                                 ),
                             ],
@@ -283,12 +285,15 @@ outputs = [
     Output("table2", "columns"),
     Output("table2", "data"),
     Output("table2", "style_data"),
+    Output("table2", "filter_action"),
+    Output("table2", "filter_query"),
 ]
 inputs = [
     Input("disconnect-btn", "n_clicks"),
     Input("filtre-valid", "n_clicks"),
     Input("graph", "selectedData"),
     Input("tabs", "value"),
+    Input("graph2", "selectedData"),
 ]
 states = [
     State("select-id_cpt", "value"),
@@ -297,6 +302,8 @@ states = [
     State("date-range-picker", "start_date"),
     State("table", "data"),
     State("table", "filter_query"),
+    State("table2", "data"),
+    State("table2", "filter_query"),
 ]
 
 
@@ -337,13 +344,18 @@ def dashboard_manager(
             {"label": i, "value": i} for i in get_id_cpt()
         ]
 
+        # TODO A REMETTRE UNE FOIS LES TESTS FINI
         # Date par defaut
-        outputs["date-range-picker"]["end_date"] = datetime.datetime.today().strftime(
-            "%Y-%m-%d"
-        )
-        outputs["date-range-picker"]["start_date"] = datetime.datetime.today().strftime(
-            "%Y-01-01"
-        )
+        # outputs["date-range-picker"]["end_date"] = datetime.datetime.today().strftime(
+        #     "%Y-%m-%d"
+        # )
+        # outputs["date-range-picker"]["start_date"] = datetime.datetime.today().strftime(
+        #     "%Y-01-01"
+        # )
+
+        # TODO A ENLEVER UNE FOIS LES TESTS FINI
+        outputs["date-range-picker"]["end_date"] = "2008-09-01"
+        outputs["date-range-picker"]["start_date"] = "2008-08-01"
 
         return outputs
 
@@ -400,6 +412,7 @@ def dashboard_manager(
                 ylabel="Consomation",
             )
             outputs["table2"]["columns"], outputs["table2"]["data"] = table(data)
+            outputs["table2"]["filter_action"] = "native"
 
         if inputs["tabs"]["value"] == "tab3":
             # TODO : TAB3, filtre seulement pour le SGE et choisir le client => affichage de ses informations
@@ -441,6 +454,36 @@ def dashboard_manager(
 
         # TODO Cacher des colonne en fonction de l'utilisateur? ou changer la requete
         # Colonne index utile pour la jointure entre le graph et le tableau
+
+        return outputs
+
+    # Mise en evidence des points selectionner sur le graph2 consommation
+    if trigger["id"] == "graph2.selectedData":
+        style_cond = [{"if": {"column_id": "Index"}, "display": "None"}]
+        style_cond = []
+        # Filter pour afficher seulement les valeurs selectionné en premier
+        filter_query = ""
+        if inputs["graph2"]["selectedData"] is None:
+            pass
+        else:
+            for point in inputs["graph2"]["selectedData"]["points"]:
+                style_cond += [
+                    {
+                        "if": {
+                            # "column_id": "Index",
+                            "filter_query": "{{Index}} = {}".format(
+                                point["customdata"][0]
+                            ),
+                        },
+                        "backgroundColor": "rgb(255, 255, 0)",
+                        "color": "black",
+                    }
+                ]
+                filter_query += "{Index}= " + str(point["customdata"][0]) + " or "
+            filter_query = filter_query[:-4]
+
+        outputs["table2"]["style_data_conditional"] = style_cond
+        outputs["table2"]["filter_query"] = filter_query
 
         return outputs
 
