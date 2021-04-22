@@ -57,9 +57,9 @@ def get_data(
     # data: pd.DataFrame = pd.read_sql_query(
     #     "select * from"
     #     " Test.dbo.Histo"
-    #     " where TS > '"
+    #     " where TS >= '"
     #     + startDate.strftime("%d/%m/%Y")
-    #     + "' and TS < '"
+    #     + "' and TS <= '"
     #     + endDate.strftime("%d/%m/%Y")
     #     + "' and Id_CPT in ('"
     #     + "','".join(id_cpt)
@@ -72,9 +72,9 @@ def get_data(
     data: pd.DataFrame = pd.read_sql_query(
         "select Chrono, Name Id_CPT, Value, Quality, TS, Anomalie, Type_Anomalie from"
         " Test.dbo.extratanomalies"
-        " where TS > '"
+        " where TS >= '"
         + startDate.strftime("%d/%m/%Y")
-        + "' and TS < '"
+        + "' and TS <= '"
         + endDate.strftime("%d/%m/%Y")
         + "' and name in ('"
         + "','".join(id_cpt)
@@ -113,9 +113,9 @@ def get_conso(
             " v_conso vc2"
             " where"
             " vc1.Id_CPT in " + "('" + "','".join(id_cpt) + "')"
-            " and vc1.TS > '"
+            " and vc1.TS >= '"
             + startDate.strftime("%d/%m/%Y")
-            + "' and vc1.TS < '"
+            + "' and vc1.TS <= '"
             + endDate.strftime("%d/%m/%Y")
             + "' and vc1.Id_CPT = vc2.Id_CPT"
             " and vc1.Num = vc2.Num - 1"

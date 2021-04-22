@@ -177,6 +177,8 @@ layout_main = html.Div(
                                     # data=data.to_dict("records"),
                                     export_format="csv",  # TODO Download CSV auto ou créer une flask route (possibilité de choisir les lignes plus précisement?) avec un href ?
                                     sort_action="native",
+                                    # filter_action="native",
+                                    # filter_query="",
                                     style_as_list_view=True,
                                     style_cell={"padding": "5px"},
                                     style_header={
@@ -220,6 +222,7 @@ layout_main = html.Div(
                                     id="table2",
                                     export_format="csv",  # TODO Download CSV auto ou créer une flask route (possibilité de choisir les lignes plus précisement?) avec un href ?
                                     sort_action="native",
+                                    filter_action="native",
                                     style_as_list_view=True,
                                     style_cell={"padding": "5px"},
                                     style_header={
@@ -261,6 +264,9 @@ dash_app.layout = html.Div(children=[head, layout_main])
 outputs = [
     Output("url", "pathname"),
     Output("select-id_cpt", "options"),
+    # Date range par defaut
+    Output("date-range-picker", "start_date"),
+    Output("date-range-picker", "end_date"),
     # Afficher / cacher les filtres en fonction de l'onglet
     Output("select-periode", "style"),
     ############# Tab1 #############
@@ -269,6 +275,8 @@ outputs = [
     Output("table", "columns"),
     Output("table", "data"),
     Output("table", "style_data"),
+    Output("table", "filter_action"),
+    Output("table", "filter_query"),
     ############# Tab2 #############
     Output("graph2", "figure"),
     Output("table2", "style_data_conditional"),
@@ -288,6 +296,7 @@ states = [
     State("date-range-picker", "end_date"),
     State("date-range-picker", "start_date"),
     State("table", "data"),
+    State("table", "filter_query"),
 ]
 
 
@@ -328,6 +337,14 @@ def dashboard_manager(
             {"label": i, "value": i} for i in get_id_cpt()
         ]
 
+        # Date par defaut
+        outputs["date-range-picker"]["end_date"] = datetime.datetime.today().strftime(
+            "%Y-%m-%d"
+        )
+        outputs["date-range-picker"]["start_date"] = datetime.datetime.today().strftime(
+            "%Y-01-01"
+        )
+
         return outputs
 
     # Bouton deconnecter
@@ -341,8 +358,6 @@ def dashboard_manager(
             or inputs["date-range-picker"]["end_date"] is None
             or inputs["select-id_cpt"]["value"] is None
         ):
-            # TODO message d'erreur ou plage par defaut ? (ex: toutes les valeurs risque trop de données)
-            # Date par defaut : début d'année / aujourd'hui
             raise PreventUpdate
 
         start_date: datetime.datetime = datetime.datetime.strptime(
@@ -363,6 +378,7 @@ def dashboard_manager(
 
             # Tableau
             outputs["table"]["columns"], outputs["table"]["data"] = table(data)
+            outputs["table"]["filter_action"] = "native"
 
         # Tab2:
         if inputs["tabs"]["value"] == "tab2":
@@ -394,12 +410,13 @@ def dashboard_manager(
 
         return outputs
 
-    # Mise en evidence des points selectionner sur le graph
+    # Mise en evidence des points selectionner sur le graph valeur index
     if trigger["id"] == "graph.selectedData":
-        # TODO Ou plutot selectionner les lignes concernées et trier par selection
-        # TODO Voir pour afficher la page du tableau ou les données sont mise en surbrillance
 
         style_cond = [{"if": {"column_id": "Index"}, "display": "None"}]
+        style_cond = []
+        # Filter pour afficher seulement les valeurs selectionné en premier
+        filter_query = ""
         if inputs["graph"]["selectedData"] is None:
             pass
         else:
@@ -416,8 +433,11 @@ def dashboard_manager(
                         "color": "black",
                     }
                 ]
+                filter_query += "{Index}= " + str(point["customdata"][0]) + " or "
+            filter_query = filter_query[:-4]
 
         outputs["table"]["style_data_conditional"] = style_cond
+        outputs["table"]["filter_query"] = filter_query
 
         # TODO Cacher des colonne en fonction de l'utilisateur? ou changer la requete
         # Colonne index utile pour la jointure entre le graph et le tableau
