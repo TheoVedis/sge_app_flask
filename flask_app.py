@@ -7,7 +7,7 @@ from dash.dependencies import ClientsideFunction, Input, Output, State
 from dash.exceptions import PreventUpdate
 from flask import Flask, Markup, redirect, render_template, request, session, url_for
 import datetime
-from package.data_base_manager import get_data, get_id_cpt
+from package.data_base_manager import get_conso, get_data, get_id_cpt
 from package.login_manager import check_password, is_logged, msg_feedback
 from package.utility import dash_kwarg, graph, random_secret_key, table
 import pandas as pd
@@ -33,7 +33,6 @@ def index(path: str):
     Sortie:
         le template de la page a afficher ou une redirection
     """
-    print("Hey INDEX")
 
     # if path != "":
     #     return redirect(url_for(".index"))
@@ -54,6 +53,12 @@ def login():
     """
     error = None
 
+    #### TODO Enlever l'auto log
+    print("############### A ENLEVER ################### - Auto log")
+    session["is_logged"] = True
+    session["username"] = "test"
+    ############################
+
     if is_logged(session):
         return redirect(url_for("index"))
 
@@ -65,12 +70,13 @@ def login():
         print("ID:", username, "/", password)
 
         succes = check_password(username, password)
-        error = msg_feedback(succes)
 
         if succes == 0:
             session["is_logged"] = True
             session["username"] = username
             return redirect(url_for("index"))
+
+        error = msg_feedback(succes)
 
         return render_template(
             "login.html", banner=Markup(render_template("banner.html")), error=error
@@ -127,6 +133,20 @@ layout_main = html.Div(
                     className="filtre",
                     children=[
                         dcc.Dropdown(id="select-id_cpt", multi=True),
+                        dcc.Dropdown(
+                            id="select-periode",
+                            multi=False,
+                            style={"display": "None"},
+                            options=[
+                                {"label": "Jour", "value": "jour"},
+                                {"label": "Mois", "value": "mois"},
+                                {"label": "Trimestre", "value": "trim"},
+                                {"label": "Année", "value": "an"},
+                                {"label": "SGE Facturation", "value": "sge"},
+                            ],
+                            value="jour",  # TODO valeur par defaut Base SGE
+                            searchable=False,
+                        ),
                         dcc.DatePickerRange(
                             id="date-range-picker",
                             className="datePicker",
@@ -134,8 +154,6 @@ layout_main = html.Div(
                             start_date="2008-09-01",  # TODO a enlever juste pour faire des test plus rapidement
                             end_date="2008-09-02",  # Valeur par defaut?
                         ),
-                        # dcc.Dropdown(id="select-periode", multi=False, options=["Jour"]),
-                        html.H3("Heylo"),
                         html.Button(id="filtre-valid", children="valid"),
                     ],
                 ),
@@ -243,6 +261,8 @@ dash_app.layout = html.Div(children=[head, layout_main])
 outputs = [
     Output("url", "pathname"),
     Output("select-id_cpt", "options"),
+    # Afficher / cacher les filtres en fonction de l'onglet
+    Output("select-periode", "style"),
     ############# Tab1 #############
     Output("graph", "figure"),
     Output("table", "style_data_conditional"),
@@ -260,9 +280,11 @@ inputs = [
     Input("disconnect-btn", "n_clicks"),
     Input("filtre-valid", "n_clicks"),
     Input("graph", "selectedData"),
+    Input("tabs", "value"),
 ]
 states = [
     State("select-id_cpt", "value"),
+    State("select-periode", "value"),
     State("date-range-picker", "end_date"),
     State("date-range-picker", "start_date"),
     State("table", "data"),
@@ -317,32 +339,66 @@ def dashboard_manager(
         if (
             inputs["date-range-picker"]["start_date"] is None
             or inputs["date-range-picker"]["end_date"] is None
+            or inputs["select-id_cpt"]["value"] is None
         ):
             # TODO message d'erreur ou plage par defaut ? (ex: toutes les valeurs risque trop de données)
+            # Date par defaut : début d'année / aujourd'hui
             raise PreventUpdate
 
-        # Tab 1:
-        data: pd.DataFram = get_data(
-            inputs["select-id_cpt"]["value"],
-            datetime.datetime.strptime(
-                inputs["date-range-picker"]["start_date"], "%Y-%m-%d"
-            ),
-            datetime.datetime.strptime(
-                inputs["date-range-picker"]["end_date"], "%Y-%m-%d"
-            ),
+        start_date: datetime.datetime = datetime.datetime.strptime(
+            inputs["date-range-picker"]["start_date"], "%Y-%m-%d"
         )
-        outputs["graph"]["figure"] = graph(inputs["select-id_cpt"]["value"], data)
+        end_date: datetime.datetime = datetime.datetime.strptime(
+            inputs["date-range-picker"]["end_date"], "%Y-%m-%d"
+        )
 
-        # Tableau
-        outputs["table"]["columns"], outputs["table"]["data"] = table(data)
+        # Tab 1:
+        if inputs["tabs"]["value"] == "tab1":
+            data: pd.DataFram = get_data(
+                inputs["select-id_cpt"]["value"],
+                start_date,
+                end_date,
+            )
+            outputs["graph"]["figure"] = graph(inputs["select-id_cpt"]["value"], data)
+
+            # Tableau
+            outputs["table"]["columns"], outputs["table"]["data"] = table(data)
 
         # Tab2:
-        data
+        if inputs["tabs"]["value"] == "tab2":
+            print(inputs["select-periode"]["value"])
+            data: pd.DataFrame = get_conso(
+                inputs["select-id_cpt"]["value"],
+                start_date,
+                end_date,
+                inputs["select-periode"]["value"],
+            )
+
+            outputs["graph2"]["figure"] = graph(
+                inputs["select-id_cpt"]["value"],
+                data,
+                x="TS",
+                y="Conso",
+                title="Consomation",
+                xlabel=inputs["select-periode"]["value"],
+                ylabel="Consomation",
+            )
+            outputs["table2"]["columns"], outputs["table2"]["data"] = table(data)
+
+        if inputs["tabs"]["value"] == "tab3":
+            # TODO : TAB3, filtre seulement pour le SGE et choisir le client => affichage de ses informations
+            # Encore a définir
+            # Client: filtre bloqué sur le client concerné ?
+            print("TAB 3 pas encore prete")
+            raise PreventUpdate
 
         return outputs
 
     # Mise en evidence des points selectionner sur le graph
     if trigger["id"] == "graph.selectedData":
+        # TODO Ou plutot selectionner les lignes concernées et trier par selection
+        # TODO Voir pour afficher la page du tableau ou les données sont mise en surbrillance
+
         style_cond = [{"if": {"column_id": "Index"}, "display": "None"}]
         if inputs["graph"]["selectedData"] is None:
             pass
@@ -353,7 +409,7 @@ def dashboard_manager(
                         "if": {
                             # "column_id": "Index",
                             "filter_query": "{{Index}} = {}".format(
-                                point["customdata"]
+                                point["customdata"][0]
                             ),
                         },
                         "backgroundColor": "rgb(255, 255, 0)",
@@ -365,6 +421,21 @@ def dashboard_manager(
 
         # TODO Cacher des colonne en fonction de l'utilisateur? ou changer la requete
         # Colonne index utile pour la jointure entre le graph et le tableau
+
+        return outputs
+
+    # Changement de tabs
+    if trigger["id"] == "tabs.value":
+        if trigger["value"] == "tab1":
+            print("CACHER")
+            outputs["select-periode"]["style"] = {"display": "None"}
+
+        if trigger["value"] == "tab2":
+            print("PAS CACHER")
+            outputs["select-periode"]["style"] = {"display": "block"}
+
+        if trigger["value"] == "tab3":
+            pass
 
         return outputs
 

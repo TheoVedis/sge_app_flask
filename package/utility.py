@@ -117,7 +117,13 @@ def random_secret_key(length: int, size: int = 500) -> str:
 
 
 def graph(
-    id_cpt: List[str], data: pd.DataFrame, x: str = "TS", y: str = "Value"
+    id_cpt: List[str],
+    data: pd.DataFrame,
+    x: str = "TS",
+    y: str = "Value",
+    title: str = "Valeur des compteurs",
+    xlabel: str = "Date (heure)",
+    ylabel: str = "Valeur",
 ) -> go.Figure:
     """Documentation
     Crée les graphiques pour les afficher!
@@ -127,6 +133,9 @@ def graph(
         data: Dataframe des données associé a chaque compteurs
         x: La variable en abscisse (par defaut TS: le temps)
         y: La variable en hauteur ()
+        title: Le titre du graphique
+        xlabel: Le label sur l'axe X
+        ylabel: Le label sur l'axe Y
 
     Sortie:
         fig: Un magnifique graphgique
@@ -138,21 +147,32 @@ def graph(
         sub_data = data[data["Id_CPT"] == id]
         fig.add_trace(
             go.Scatter(
-                x=sub_data["TS"],
-                y=sub_data["Value"],
-                mode="markers",
+                x=sub_data[x],
+                y=sub_data[y],
+                mode="lines+markers",
                 name=id,
-                customdata=[
-                    i for i in data[data["Id_CPT"] == id].index
-                ],  # Utile pour jointure avec le tableau
-                # hovertemplate="index: %{customdata} <br><b>x:%{x}</b><br>y:%{y}",
+                customdata=list(
+                    zip(
+                        [
+                            i for i in data[data["Id_CPT"] == id].index
+                        ],  # Utile pour jointure avec le tableau
+                        [i for i in data[data["Id_CPT"] == id]["Type_Anomalie"]],
+                    )
+                ),
+                marker=dict(
+                    color=[
+                        "rgba(0, 0, 255, 1)" if i == "Normal" else "rgba(255, 0, 0, 1)"
+                        for i in data[data["Id_CPT"] == id]["Type_Anomalie"]
+                    ]
+                ),
+                hovertemplate="Anomalie: %{customdata[1]}",
             )
         )
 
     fig.update_layout(
-        title="Valeurs des compteurs",
-        xaxis_title="Date (heure)",
-        yaxis_title="Valeur",
+        title=title,
+        xaxis_title=xlabel,
+        yaxis_title=ylabel,
         legend_title="Id Compteur:",
         font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
     )
