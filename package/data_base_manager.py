@@ -16,7 +16,7 @@ def get_id_cpt(client: Union[str, None] = None) -> List[str]:
     """Documentation
     Parametre:
         client: le nom du client, du compte connecté s'il doit être restreint
-        # TODO enlever le None
+        # TODO enlever le None une fois la BD client
 
     Sortie:
         la liste des id des compteurs
@@ -104,7 +104,10 @@ def get_conso(
     Sortie:
         data: DataFrame contenant les consommations associées aux compteurs
     """
+    # TODO Changer les requetes par de simple requetes sur des vues
+    # Voir pour le calul de la conso
 
+    # Requete conso par jour
     if periode == "jour":
         data: pd.DataFrame = pd.read_sql_query(
             "select vc1.Id_CPT, datefromparts(YEAR(vc2.TS), MONTH(vc2.TS), DAY(vc2.TS)) TS, SUM(vc2.Value - vc1.Value) Conso"
@@ -123,6 +126,49 @@ def get_conso(
             " order by vc1.Id_CPT, datefromparts(YEAR(vc2.TS), MONTH(vc2.TS), DAY(vc2.TS))",
             con=conn,
         )
+
+    # Requete conso par mois
+    if periode == "mois":
+        data: pd.DataFrame = pd.read_sql_query(
+            "select vc1.Id_CPT, datefromparts(YEAR(vc2.TS), MONTH(vc2.TS), 1) TS, SUM(vc2.Value - vc1.Value) Conso"
+            " from"
+            " v_conso vc1,"
+            " v_conso vc2"
+            " where"
+            " vc1.Id_CPT in " + "('" + "','".join(id_cpt) + "')"
+            " and vc1.TS >= '"
+            + startDate.strftime("%d/%m/%Y")
+            + "' and vc1.TS <= '"
+            + endDate.strftime("%d/%m/%Y")
+            + "' and vc1.Id_CPT = vc2.Id_CPT"
+            " and vc1.Num = vc2.Num - 1"
+            " group by vc1.Id_CPT, datefromparts(YEAR(vc2.TS), MONTH(vc2.TS), 1)"
+            " order by vc1.Id_CPT, datefromparts(YEAR(vc2.TS), MONTH(vc2.TS), 1)",
+            con=conn,
+        )
+
+    # Requete pour la consomation par trimestre
+    if periode == "trim":
+        data: pd.DataFrame = pd.read_sql_query(
+            "select vc1.Id_CPT, YEAR(vc2.TS) + MONTH(vc2.TS) / 3 / 10. TS, SUM(vc2.Value - vc1.Value) Conso"
+            " from"
+            " v_conso vc1,"
+            " v_conso vc2"
+            " where"
+            " vc1.Id_CPT in " + "('" + "','".join(id_cpt) + "')"
+            " and vc1.TS >= '"
+            + startDate.strftime("%d/%m/%Y")
+            + "' and vc1.TS <= '"
+            + endDate.strftime("%d/%m/%Y")
+            + "' and vc1.Id_CPT = vc2.Id_CPT"
+            " and vc1.Num = vc2.Num - 1"
+            " group by vc1.Id_CPT, YEAR(vc2.TS) + MONTH(vc2.TS) / 3 / 10."
+            " order by vc1.Id_CPT, YEAR(vc2.TS) + MONTH(vc2.TS) / 3 / 10.",
+            con=conn,
+        )
+
+    if periode == "sge":
+        pass
 
     # print(data)
 

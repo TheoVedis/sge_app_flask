@@ -141,10 +141,9 @@ layout_main = html.Div(
                                 {"label": "Jour", "value": "jour"},
                                 {"label": "Mois", "value": "mois"},
                                 {"label": "Trimestre", "value": "trim"},
-                                {"label": "Année", "value": "an"},
                                 {"label": "SGE Facturation", "value": "sge"},
                             ],
-                            value="jour",  # TODO valeur par defaut Base SGE
+                            value="jour",  # TODO valeur par defaut Base SGE / attente d'info sur le calcul de la conso
                             searchable=False,
                         ),
                         dcc.DatePickerRange(
@@ -152,7 +151,7 @@ layout_main = html.Div(
                             className="datePicker",
                             display_format="DD/MM/YYYY",
                             start_date="2008-09-01",  # TODO a enlever juste pour faire des test plus rapidement
-                            end_date="2008-09-02",  # Valeur par defaut?
+                            end_date="2008-09-02",
                         ),
                         html.Button(id="filtre-valid", children="valid"),
                     ],
@@ -233,10 +232,10 @@ layout_main = html.Div(
                                     page_size=30,
                                     row_selectable="multi",
                                     style_header_conditional=[
-                                        {
-                                            "if": {"column_id": "Index"},
-                                            "display": "None",
-                                        }
+                                        # {
+                                        #     "if": {"column_id": "Index"},
+                                        #     "display": "None",
+                                        # }
                                     ],
                                     style_data_conditional=[
                                         # Probleme cacher la colonne index décale les filtres
@@ -345,7 +344,7 @@ def dashboard_manager(
         ]
 
         # TODO A REMETTRE UNE FOIS LES TESTS FINI
-        # Date par defaut
+        # Date par defaut debut d'année a aujourd'hui
         # outputs["date-range-picker"]["end_date"] = datetime.datetime.today().strftime(
         #     "%Y-%m-%d"
         # )
@@ -417,7 +416,7 @@ def dashboard_manager(
         if inputs["tabs"]["value"] == "tab3":
             # TODO : TAB3, filtre seulement pour le SGE et choisir le client => affichage de ses informations
             # Encore a définir
-            # Client: filtre bloqué sur le client concerné ?
+            # Client: filtre bloqué sur le client concerné
             print("TAB 3 pas encore prete")
             raise PreventUpdate
 
@@ -452,7 +451,7 @@ def dashboard_manager(
         outputs["table"]["style_data_conditional"] = style_cond
         outputs["table"]["filter_query"] = filter_query
 
-        # TODO Cacher des colonne en fonction de l'utilisateur? ou changer la requete
+        # TODO Choisir les colonnes interressante a afficher selon SGE et CLIENT
         # Colonne index utile pour la jointure entre le graph et le tableau
 
         return outputs
