@@ -54,9 +54,9 @@ def login():
     error = None
 
     #### TODO Enlever l'auto log
-    print("############### A ENLEVER ################### - Auto log")
-    session["is_logged"] = True
-    session["username"] = "test"
+    # print("############### A ENLEVER ################### - Auto log")
+    # session["is_logged"] = True
+    # session["username"] = "test"
     ############################
 
     if is_logged(session):
@@ -150,8 +150,6 @@ layout_main = html.Div(
                             id="date-range-picker",
                             className="datePicker",
                             display_format="DD/MM/YYYY",
-                            start_date="2008-09-01",  # TODO a enlever juste pour faire des test plus rapidement
-                            end_date="2008-09-02",
                         ),
                         html.Button(id="filtre-valid", children="valid"),
                     ],

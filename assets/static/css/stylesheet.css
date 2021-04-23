@@ -5,6 +5,11 @@
     margin: 0px -10px 10px;
     background-color: rgb(66, 196, 247);
     border-radius: 2px;
+    overflow: hidden; /*TEST*/
+    position: fixed; /*TEST*/
+    top: 0px; /*TEST*/
+    width: 100%; /*TEST*/
+    z-index: 10; /*TEST*/
 }
 
 .banner h2 {
@@ -74,6 +79,7 @@ input[type="password"] {
 
 #page-content {
     transition: 0.5s;
+    margin-top: 100px; /*TEST*/
 }
 
 /* SIDE BAR */
@@ -88,8 +94,8 @@ input[type="password"] {
     background-color: #111;
     overflow-x: hidden;
     transition: 0.5s;
-    padding-top: 60px;
-    margin-top: 80px;
+    padding-top: 50px;
+    margin-top: 50px;
 }
 
 .sidenav .title {
