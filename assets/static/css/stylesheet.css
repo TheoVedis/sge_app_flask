@@ -5,11 +5,11 @@
     margin: 0px -10px 10px;
     background-color: rgb(66, 196, 247);
     border-radius: 2px;
-    overflow: hidden; /*TEST*/
-    position: fixed; /*TEST*/
-    top: 0px; /*TEST*/
-    width: 100%; /*TEST*/
-    z-index: 10; /*TEST*/
+    overflow: hidden;
+    position: fixed;
+    top: 0px;
+    width: 100%;
+    z-index: 10; /* Toujour au dessus */
 }
 
 .banner h2 {
@@ -24,6 +24,39 @@
     float: right;
     right: 10px;
     height: 75px;
+}
+
+#head-content {
+    height: 75px;
+    margin: 0px -10px 10px;
+    /* background-color: rgb(78, 81, 82); */
+    border-radius: 2px;
+    overflow: hidden;
+    position: fixed;
+    top: 0px;
+    width: 100%;
+    z-index: 10; /* Toujour au dessus */
+    /* text-align: center; */
+}
+
+#head-msg {
+    /* position: relative; */
+    display: inline-block;
+    /* margin-left: 10%; */
+    font-size: large;
+    /* padding-right: 750px; */
+    margin-left: 40%;
+    padding-top: 20px;
+    text-align: center;
+}
+
+#disconnect-btn {
+    position: relative;
+    /* margin-right: 10%; */
+    text-align: center;
+    float: right;
+    right: 10%;
+    margin-top: 15px;
 }
 
 /* LOGIN */

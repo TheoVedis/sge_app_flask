@@ -2,6 +2,7 @@ from typing import Any, Dict
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+from dash_html_components import Div
 import dash_table as dt
 from dash.dependencies import ClientsideFunction, Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -105,7 +106,15 @@ head = html.Div(
         html.Div(
             children=[
                 html.H2("SGE_APP"),
-                html.Button(id="disconnect-btn", children=["deconnecter"], n_clicks=0),
+                html.Div(
+                    id="head-content",
+                    children=[
+                        html.Span(id="head-msg", children="Bienvenue ..."),
+                        html.Button(
+                            id="disconnect-btn", children=["deconnecter"], n_clicks=0
+                        ),
+                    ],
+                ),
                 html.Img(src="./assets/static/img/stock-icon.png"),
             ],
             className="banner",
@@ -196,10 +205,10 @@ layout_main = html.Div(
                                     page_size=30,
                                     row_selectable="multi",
                                     style_header_conditional=[
-                                        {
-                                            "if": {"column_id": "Index"},
-                                            "display": "None",
-                                        }
+                                        # {
+                                        #     "if": {"column_id": "Index"},
+                                        #     "display": "None",
+                                        # }
                                     ],
                                     style_data_conditional=[
                                         # Probleme cacher la colonne index décale les filtres
@@ -263,6 +272,7 @@ dash_app.layout = html.Div(children=[head, layout_main])
 outputs = [
     Output("url", "pathname"),
     Output("select-id_cpt", "options"),
+    Output("head-msg", "children"),
     # Date range par defaut
     Output("date-range-picker", "start_date"),
     Output("date-range-picker", "end_date"),
@@ -335,6 +345,8 @@ def dashboard_manager(
         if not is_logged(session):
             outputs["url"]["pathname"] = "/login"
             return outputs
+
+        outputs["head-msg"]["children"] = "Bienvenue " + str(session["username"])
 
         # recupération des id_cpt pour le selecteur
         outputs["select-id_cpt"]["options"] = [
@@ -487,11 +499,9 @@ def dashboard_manager(
     # Changement de tabs
     if trigger["id"] == "tabs.value":
         if trigger["value"] == "tab1":
-            print("CACHER")
             outputs["select-periode"]["style"] = {"display": "None"}
 
         if trigger["value"] == "tab2":
-            print("PAS CACHER")
             outputs["select-periode"]["style"] = {"display": "block"}
 
         if trigger["value"] == "tab3":
