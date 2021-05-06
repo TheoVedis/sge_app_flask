@@ -124,6 +124,7 @@ def graph(
     title: str = "Valeur des compteurs",
     xlabel: str = "Date (heure)",
     ylabel: str = "Valeur",
+    mode: str = "lines+markers",
 ) -> go.Figure:
     """Documentation
     Crée les graphiques pour les afficher!
@@ -149,7 +150,7 @@ def graph(
             go.Scatter(
                 x=sub_data[x],
                 y=sub_data[y],
-                mode="lines+markers",
+                mode=mode,
                 name=id,
                 customdata=list(
                     zip(

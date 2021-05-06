@@ -395,7 +395,9 @@ def dashboard_manager(
                 start_date,
                 end_date,
             )
-            outputs["graph"]["figure"] = graph(inputs["select-id_cpt"]["value"], data)
+            outputs["graph"]["figure"] = graph(
+                inputs["select-id_cpt"]["value"], data, mode="markers"
+            )
 
             # Tableau
             outputs["table"]["columns"], outputs["table"]["data"] = table(data)
