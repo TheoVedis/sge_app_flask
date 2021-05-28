@@ -137,12 +137,16 @@ def graph(
         title: Le titre du graphique
         xlabel: Le label sur l'axe X
         ylabel: Le label sur l'axe Y
+        mode: Le mode de tracer (ligne, point..)
 
     Sortie:
         fig: Un magnifique graphgique
 
     """
     fig = go.Figure()
+
+    if type(id_cpt) != list:
+        id_cpt = [id_cpt]
 
     for id in id_cpt:
         sub_data = data[data["Id_CPT"] == id]

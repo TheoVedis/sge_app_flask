@@ -1,6 +1,7 @@
 from typing import Any, Dict
 import dash
 import dash_core_components as dcc
+from dash_core_components import Dropdown
 import dash_html_components as html
 from dash_html_components import Div
 import dash_table as dt
@@ -8,7 +9,14 @@ from dash.dependencies import ClientsideFunction, Input, Output, State
 from dash.exceptions import PreventUpdate
 from flask import Flask, Markup, redirect, render_template, request, session, url_for
 import datetime
-from package.data_base_manager import get_conso, get_data, get_id_cpt
+from package.data_base_manager import (
+    get_batiment,
+    get_client,
+    get_conso,
+    get_data,
+    get_id_cpt,
+    get_type_energie,
+)
 from package.login_manager import check_password, is_logged, msg_feedback
 from package.utility import dash_kwarg, graph, random_secret_key, table
 import pandas as pd
@@ -55,9 +63,9 @@ def login():
     error = None
 
     #### TODO Enlever l'auto log
-    # print("############### A ENLEVER ################### - Auto log")
-    # session["is_logged"] = True
-    # session["username"] = "test"
+    print("############### A ENLEVER ################### - Auto log")
+    session["is_logged"] = True
+    session["username"] = "test"
     ############################
 
     if is_logged(session):
@@ -141,7 +149,27 @@ layout_main = html.Div(
                 html.Div(
                     className="filtre",
                     children=[
-                        dcc.Dropdown(id="select-id_cpt", multi=True),
+                        dcc.Dropdown(
+                            id="select-client",
+                            multi=False,
+                            placeholder="Select client...",
+                            value=None,
+                        ),
+                        dcc.Dropdown(
+                            id="select-type",
+                            multi=False,
+                            placeholder="Select type d'energie...",
+                        ),
+                        dcc.Dropdown(
+                            id="select-bat",
+                            multi=False,
+                            placeholder="Select batiment...",
+                        ),
+                        dcc.Dropdown(
+                            id="select-id_cpt",
+                            multi=False,
+                            placeholder="Select compteur...",
+                        ),  # multi=False signifie un seul compteur selectionnable a la fois
                         dcc.Dropdown(
                             id="select-periode",
                             multi=False,
@@ -159,6 +187,7 @@ layout_main = html.Div(
                             id="date-range-picker",
                             className="datePicker",
                             display_format="DD/MM/YYYY",
+                            first_day_of_week=1,
                         ),
                         html.Button(id="filtre-valid", children="valid"),
                     ],
@@ -271,8 +300,12 @@ dash_app.layout = html.Div(children=[head, layout_main])
 
 outputs = [
     Output("url", "pathname"),
-    Output("select-id_cpt", "options"),
     Output("head-msg", "children"),
+    # Selecteur (Filtre)
+    Output("select-client", "options"),
+    Output("select-type", "options"),
+    Output("select-bat", "options"),
+    Output("select-id_cpt", "options"),
     # Date range par defaut
     Output("date-range-picker", "start_date"),
     Output("date-range-picker", "end_date"),
@@ -301,9 +334,12 @@ inputs = [
     Input("graph", "selectedData"),
     Input("tabs", "value"),
     Input("graph2", "selectedData"),
+    Input("select-client", "value"),
+    Input("select-type", "value"),
+    Input("select-bat", "value"),
+    Input("select-id_cpt", "value"),
 ]
 states = [
-    State("select-id_cpt", "value"),
     State("select-periode", "value"),
     State("date-range-picker", "end_date"),
     State("date-range-picker", "start_date"),
@@ -351,6 +387,21 @@ def dashboard_manager(
         # recupération des id_cpt pour le selecteur
         outputs["select-id_cpt"]["options"] = [
             {"label": i, "value": i} for i in get_id_cpt()
+        ]
+
+        # récupération des noms des clients pour le selecteur
+        outputs["select-client"]["options"] = [
+            {"label": i, "value": i} for i in get_client()
+        ]
+
+        # récupération des types d'energie pour le selecteur
+        outputs["select-type"]["options"] = [
+            {"label": i, "value": i} for i in get_type_energie()
+        ]
+
+        # récupération des batiments pour le selecteur
+        outputs["select-bat"]["options"] = [
+            {"label": i, "value": i} for i in get_batiment()
         ]
 
         # TODO A REMETTRE UNE FOIS LES TESTS FINI
@@ -425,6 +476,7 @@ def dashboard_manager(
             outputs["table2"]["columns"], outputs["table2"]["data"] = table(data)
             outputs["table2"]["filter_action"] = "native"
 
+        # Tab3:
         if inputs["tabs"]["value"] == "tab3":
             # TODO : TAB3, filtre seulement pour le SGE et choisir le client => affichage de ses informations
             # Encore a définir
@@ -510,6 +562,87 @@ def dashboard_manager(
             pass
 
         return outputs
+
+    # Selection d'un client
+    if trigger["id"] == "select-client.value":
+        if trigger["value"] is None or trigger["value"] == []:
+            # TODO update les autres filtres
+            pass
+
+        # récupération des types d'energie pour le selecteur
+        outputs["select-type"]["options"] = [
+            {"label": i, "value": i}
+            for i in get_type_energie(name_client=trigger["value"])
+        ]
+
+        # récupération des batiments pour le selecteur
+        outputs["select-bat"]["options"] = [
+            {"label": i, "value": i} for i in get_batiment(name_client=trigger["value"])
+        ]
+
+        # Récupération des id_cpt pour le selecteur
+        outputs["select-id_cpt"]["options"] = [
+            {"label": i, "value": i}
+            for i in get_id_cpt(
+                client=inputs["select-client"]["value"],
+                name_bat=inputs["select-bat"]["value"],
+                type_energie=inputs["select-type"]["value"],
+            )
+        ]
+
+        return outputs
+
+    # Selection d'un type d'energie
+    if trigger["id"] == "select-type.value":
+        if trigger["value"] is not None and not trigger["value"] == []:
+            # TODO update les autres filtres
+            pass
+
+        # récupération des batiments pour le selecteur
+        outputs["select-bat"]["options"] = [
+            {"label": i, "value": i}
+            for i in get_batiment(
+                type_energie=trigger["value"],
+                name_client=inputs["select-client"]["value"],
+            )
+        ]
+
+        # Récupération des id_cpt pour le selecteur
+        outputs["select-id_cpt"]["options"] = [
+            {"label": i, "value": i}
+            for i in get_id_cpt(
+                client=inputs["select-client"]["value"],
+                name_bat=inputs["select-bat"]["value"],
+                type_energie=inputs["select-type"]["value"],
+            )
+        ]
+
+        return outputs
+
+    # Selection d'un batiment
+    if trigger["id"] == "select-bat.value":
+        if trigger["value"] is not None and not trigger["value"] == []:
+            # TODO update les autres filtres
+            pass
+
+        # Récupération des id_cpt pour le selecteur
+        outputs["select-id_cpt"]["options"] = [
+            {"label": i, "value": i}
+            for i in get_id_cpt(
+                client=inputs["select-client"]["value"],
+                name_bat=inputs["select-bat"]["value"],
+                type_energie=inputs["select-type"]["value"],
+            )
+        ]
+
+        return outputs
+
+    # Selection d'un compteur
+    if trigger["id"] == "select-id_cpt.value":
+        if trigger["value"] is not None and not trigger["value"] == []:
+            # TODO update les autres filtres
+            pass
+        raise PreventUpdate
 
     print("TRIGGER non géré !")
     raise PreventUpdate

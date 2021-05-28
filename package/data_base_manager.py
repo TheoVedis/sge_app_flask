@@ -12,7 +12,11 @@ conn: pyodbc.Connection = pyodbc.connect(
 )
 
 
-def get_id_cpt(client: Union[str, None] = None) -> List[str]:
+def get_id_cpt(
+    client: Union[str, None] = None,
+    type_energie: Union[str, None] = None,
+    name_bat: Union[str, None] = None,
+) -> List[str]:
     """Documentation
     Parametre:
         client: le nom du client, du compte connecté s'il doit être restreint
@@ -22,19 +26,207 @@ def get_id_cpt(client: Union[str, None] = None) -> List[str]:
         la liste des id des compteurs
     """
 
-    # A REMETTRE pour selectionner les ID_CPT
+    if client is None and type_energie is None and name_bat is None:
+        # A REMETTRE pour selectionner les ID_CPT
+        data: pd.DataFrame = pd.read_sql_query(
+            "select distinct Id_CPT from Test.dbo.Histo"
+            # "where Nom_client = '" + client + "'", # TODO A rajouter une fois la base client intégré
+            " order by Id_CPT",
+            conn,
+        )
+
+        # data: pd.DataFrame = pd.read_sql_query(
+        #     "select distinct name from Test.dbo.extratanomalies order by name", conn
+        # )
+        return list(data["Id_CPT"])
+
+    if type_energie is None and name_bat is None:
+        data: pd.DataFrame = pd.read_sql_query(
+            "select distinct vc.Id_CPT from v_webApp_client vc where '"
+            + client
+            + "' = vc.Nom_Client",
+            conn,
+        )
+        return list(data["Id_CPT"])
+
+    if name_bat is None:
+        if client is None:
+            data: pd.DataFrame = pd.read_sql_query(
+                "select distinct vc.Id_CPT from v_webApp_client vc where '"
+                + type_energie
+                + "' = vc.Type_Energie",
+                conn,
+            )
+        else:
+            data: pd.DataFrame = pd.read_sql_query(
+                "select distinct vc.Id_CPT from v_webApp_client vc where '"
+                + type_energie
+                + "' = vc.Type_Energie "
+                + "and vc.Nom_Client = '"
+                + client
+                + "'",
+                conn,
+            )
+        return list(data["Id_CPT"])
+
+    if type_energie is None:
+        data: pd.DataFrame = pd.read_sql_query(
+            "select distinct vc.Id_CPT from v_webApp_client vc where '"
+            + name_bat
+            + "' = vc.Nom_Batiment",
+            conn,
+        )
+    else:
+        data: pd.DataFrame = pd.read_sql_query(
+            "select distinct vc.Id_CPT from v_webApp_client vc where '"
+            + type_energie
+            + "' = vc.Type_Energie "
+            + "and vc.Nom_Batiment = '"
+            + name_bat
+            + "'",
+            conn,
+        )
+
+    return list(data["Id_CPT"])
+
+
+def get_client(
+    id_cpt: Union[str, None] = None,
+    name_bat: Union[str, None] = None,
+    type_energie: Union[str, None] = None,
+) -> List[str]:
+
+    # if id_cpt is None and name_bat is None and type_energie is None:
     data: pd.DataFrame = pd.read_sql_query(
-        "select distinct Id_CPT from Test.dbo.Histo"
-        # "where Nom_client = '" + client + "'", # TODO A rajouter une fois la base client intégré
-        " order by Id_CPT",
+        "select distinct Nom_Client from v_webApp_client", conn
+    )
+    return list(data["Nom_Client"])
+
+    if id_cpt is None and type_energie is None:
+        data: pd.DataFrame = pd.read_sql_query(
+            "select distinct vc.Nom_Client from v_webApp_client vc where '"
+            + name_bat
+            + "' = vc.Nom_Batiment",
+            conn,
+        )
+        return list(data["Nom_Client"])
+
+    if id_cpt is None:
+        data: pd.DataFrame = pd.read_sql_query(
+            "select distinct Nom_Client from v_webApp_client vc where '"
+            + type_energie
+            + "' = vc.Type_Energie",
+            conn,
+        )
+        return list(data["Nom_Client"])
+
+    data: pd.DataFrame = pd.read_sql(
+        "select distinct Nom_Client from v_webApp_client vc where '"
+        + id_cpt
+        + "' = vc.Id_CPT",
         conn,
     )
 
-    # data: pd.DataFrame = pd.read_sql_query(
-    #     "select distinct name from Test.dbo.extratanomalies order by name", conn
-    # )
+    return list(data["Nom_Client"])
 
-    return list(data["Id_CPT"])
+
+def get_type_energie(
+    id_cpt: Union[str, None] = None,
+    name_bat: Union[str, None] = None,
+    name_client: Union[str, None] = None,
+) -> List[str]:
+    # Cas Aucune préselection
+    # if id_cpt is None and name_bat is None and name_client is None:
+
+    data: pd.DataFrame = pd.read_sql_query(
+        "select distinct Type_Energie from v_webApp_client", conn
+    )
+    return list(data["Type_Energie"])
+
+    # Cas client selectionné
+    if id_cpt is None and name_bat is None:
+        data: pd.DataFrame = pd.read_sql_query(
+            "select distinct vc.Type_Energie from v_webApp_client vc where '"
+            + name_client
+            + "' = vc.Nom_Client",
+            conn,
+        )
+        return list(data["Type_Energie"])
+
+    # Cas Batiment selectionné
+    if id_cpt is None:
+        data: pd.DataFrame = pd.read_sql_query(
+            "select distinct Type_Energie from v_webApp_client vc where '"
+            + name_bat
+            + "' = vc.Nom_Batiment",
+            conn,
+        )
+        return list(data["Type_Energie"])
+
+    # Cas compteur selectionné
+    data: pd.DataFrame = pd.read_sql(
+        "select distinct Type_Energie from v_webApp_client vc where '"
+        + id_cpt
+        + "' = vc.Id_CPT",
+        conn,
+    )
+
+    return list(data["Type_Energie"])
+
+
+def get_batiment(
+    id_cpt: Union[str, None] = None,
+    type_energie: Union[str, None] = None,
+    name_client: Union[str, None] = None,
+) -> List[str]:
+    # Cas Aucune préselection
+    if id_cpt is None and type_energie is None and name_client is None:
+        data: pd.DataFrame = pd.read_sql_query(
+            "select distinct Nom_Batiment from v_webApp_client", conn
+        )
+        return list(data["Nom_Batiment"])
+
+    # Cas client selectionné
+    if id_cpt is None and type_energie is None:
+        data: pd.DataFrame = pd.read_sql_query(
+            "select distinct vc.Nom_Batiment from v_webApp_client vc where '"
+            + name_client
+            + "' = vc.Nom_Client",
+            conn,
+        )
+        return list(data["Nom_Batiment"])
+
+    # Cas type_energie selectionné
+    if id_cpt is None:
+        if name_client is None:
+            data: pd.DataFrame = pd.read_sql_query(
+                "select distinct Nom_Batiment from v_webApp_client vc where '"
+                + type_energie
+                + "' = vc.Type_Energie",
+                conn,
+            )
+        else:
+            data: pd.DataFrame = pd.read_sql_query(
+                "select distinct Nom_Batiment from v_webApp_client vc where '"
+                + type_energie
+                + "' = vc.Type_Energie"
+                + " and vc.Nom_Client = '"
+                + name_client
+                + "'",
+                conn,
+            )
+
+        return list(data["Nom_Batiment"])
+
+    # Cas compteur selectionné
+    data: pd.DataFrame = pd.read_sql(
+        "select distinct Nom_Batiment from v_webApp_client vc where '"
+        + id_cpt
+        + "' = vc.Id_CPT",
+        conn,
+    )
+
+    return list(data["Nom_Batiment"])
 
 
 def get_data(
@@ -52,6 +244,9 @@ def get_data(
         data: DataFrame contenant les valeurs des compteurs et tout autres informations
 
     """
+
+    if type(id_cpt) != list:
+        id_cpt = [id_cpt]
 
     # Requete sur la base classique
     data: pd.DataFrame = pd.read_sql_query(
@@ -176,11 +371,13 @@ def get_conso(
 
 
 if __name__ == "__main__":
-    print(get_id_cpt())
+    # print(get_id_cpt())
     date = datetime.datetime.strptime("01-09-2008", "%d-%m-%Y")
     date2 = datetime.datetime.strptime("01-10-2008", "%d-%m-%Y")
 
     id_cpt = ["EA0101", "EA0102"]
 
     # print(get_data(id_cpt, date, date2).TS)
-    print(get_conso(id_cpt, date, date2, periode="jour"))
+    # print(get_conso(id_cpt, date, date2, periode="jour"))
+
+    print(get_client(name_bat="A1"))
