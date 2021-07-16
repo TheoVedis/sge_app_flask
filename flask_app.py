@@ -1,31 +1,48 @@
+import datetime
 from typing import Any, Dict
+
 import dash
 import dash_core_components as dcc
-from dash_core_components import Dropdown
 import dash_html_components as html
-from dash_html_components import Div
 import dash_table as dt
+from flask_login.utils import login_user
+import pandas as pd
 from dash.dependencies import ClientsideFunction, Input, Output, State
 from dash.exceptions import PreventUpdate
+from dash_core_components import Dropdown
+from dash_html_components import Div
 from flask import Flask, Markup, redirect, render_template, request, session, url_for
-import datetime
+from flask_login import LoginManager, login_required, logout_user, current_user
+
 from package.data_base_manager import (
     get_batiment,
     get_client,
     get_conso,
     get_data,
+    get_facturation_date,
     get_id_cpt,
     get_type_energie,
 )
-from package.login_manager import check_password, is_logged, msg_feedback
+from package.login_manager import User, check_password, is_logged, msg_feedback
 from package.utility import dash_kwarg, graph, random_secret_key, table
-import pandas as pd
 
 app = Flask(
     __name__, static_folder="./assets/static/", template_folder="./assets/templates/"
 )
 
 app.secret_key = random_secret_key(123)
+login_manager = LoginManager(app)
+current_user: User = current_user
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get_user(user_id)
+
+
+@login_manager.unauthorized_handler
+def unauthorized_route():
+    return redirect(url_for("index"))
 
 
 @app.route("/", defaults={"path": ""})
@@ -43,10 +60,7 @@ def index(path: str):
         le template de la page a afficher ou une redirection
     """
 
-    # if path != "":
-    #     return redirect(url_for(".index"))
-
-    if not is_logged(session):
+    if not is_logged(current_user):
         return redirect(url_for(".login"))
 
     return redirect("/dashboard")
@@ -63,12 +77,12 @@ def login():
     error = None
 
     #### TODO Enlever l'auto log
-    print("############### A ENLEVER ################### - Auto log")
-    session["is_logged"] = True
-    session["username"] = "test"
+    # print("############### A ENLEVER ################### - Auto log")
+    # session["is_logged"] = True
+    # session["username"] = "test"
     ############################
 
-    if is_logged(session):
+    if is_logged(current_user):
         return redirect(url_for("index"))
 
     if request.method == "POST":
@@ -81,8 +95,10 @@ def login():
         succes = check_password(username, password)
 
         if succes == 0:
-            session["is_logged"] = True
-            session["username"] = username
+            # session["is_logged"] = True
+            # session["username"] = username
+            user = User.get_user(username)
+            login_user(user, remember=False)
             return redirect(url_for("index"))
 
         error = msg_feedback(succes)
@@ -103,13 +119,16 @@ def login():
 
 dash_app = dash.Dash(__name__, server=app, url_base_pathname="/dashboard/")
 
+# Ajout de l'authentification sur la partie dash
+for view_func in app.view_functions:
+    if view_func.startswith("/dashboard/"):
+        app.view_functions[view_func] = login_required(app.view_functions[view_func])
+
 head = html.Div(
     id="head",
     children=[
         # Represente l'url
         dcc.Location(id="url", refresh=True),
-        # Represente le stockage de variable de session
-        dcc.Store(id="session", storage_type="session"),
         # Banniere
         html.Div(
             children=[
@@ -180,7 +199,7 @@ layout_main = html.Div(
                                 {"label": "Trimestre", "value": "trim"},
                                 {"label": "SGE Facturation", "value": "sge"},
                             ],
-                            value="jour",  # TODO valeur par defaut Base SGE / attente d'info sur le calcul de la conso
+                            value="jour",
                             searchable=False,
                         ),
                         dcc.DatePickerRange(
@@ -190,6 +209,16 @@ layout_main = html.Div(
                             first_day_of_week=1,
                         ),
                         html.Button(id="filtre-valid", children="valid"),
+                        html.P(className="title", children=["Date Facturation"]),
+                        html.Div(
+                            children=dt.DataTable(
+                                id="facturation-date",
+                                style_as_list_view=True,
+                                style_cell={"text-align": "center"},
+                                page_size=5,
+                            ),
+                            style={"margin": "1%"},
+                        ),
                     ],
                 ),
             ],
@@ -210,7 +239,7 @@ layout_main = html.Div(
                                     id="table",
                                     # columns=[{"name": i, "id": i} for i in data.columns],
                                     # data=data.to_dict("records"),
-                                    export_format="csv",  # TODO Download CSV auto ou créer une flask route (possibilité de choisir les lignes plus précisement?) avec un href ?
+                                    export_format="csv",
                                     sort_action="native",
                                     # filter_action="native",
                                     # filter_query="",
@@ -256,7 +285,7 @@ layout_main = html.Div(
                                 dcc.Graph(id="graph2", figure={}),
                                 dt.DataTable(
                                     id="table2",
-                                    export_format="csv",  # TODO Download CSV auto ou créer une flask route (possibilité de choisir les lignes plus précisement?) avec un href ?
+                                    export_format="csv",
                                     sort_action="native",
                                     # filter_action="native",
                                     style_as_list_view=True,
@@ -309,6 +338,10 @@ outputs = [
     # Date range par defaut
     Output("date-range-picker", "start_date"),
     Output("date-range-picker", "end_date"),
+    # Date facturation
+    Output("facturation-date", "data"),
+    Output("facturation-date", "columns"),
+    Output("facturation-date", "filter_action"),
     # Afficher / cacher les filtres en fonction de l'onglet
     Output("select-periode", "style"),
     ############# Tab1 #############
@@ -375,34 +408,45 @@ def dashboard_manager(
     """
     print("TRIGGER:", trigger)
 
+    # Si pas connecter on le renvoie a la page de connexion
+    if not is_logged(current_user):
+        outputs["url"]["pathname"] = "/login"
+        return outputs
+
     # Quand la page charge
     if trigger["id"] == ".":
-        # Si pas connecter on le renvoie a la page de connexion
-        if not is_logged(session):
-            outputs["url"]["pathname"] = "/login"
-            return outputs
 
-        outputs["head-msg"]["children"] = "Bienvenue " + str(session["username"])
+        outputs["head-msg"]["children"] = "Bienvenue " + str(current_user.username)
 
         # recupération des id_cpt pour le selecteur
         outputs["select-id_cpt"]["options"] = [
-            {"label": i, "value": i} for i in get_id_cpt()
+            {"label": i, "value": i} for i in get_id_cpt() if i is not None
         ]
 
         # récupération des noms des clients pour le selecteur
         outputs["select-client"]["options"] = [
-            {"label": i, "value": i} for i in get_client()
+            {"label": i, "value": i} for i in get_client() if i is not None
         ]
 
         # récupération des types d'energie pour le selecteur
         outputs["select-type"]["options"] = [
-            {"label": i, "value": i} for i in get_type_energie()
+            {"label": i, "value": i} for i in get_type_energie() if i is not None
         ]
 
         # récupération des batiments pour le selecteur
         outputs["select-bat"]["options"] = [
-            {"label": i, "value": i} for i in get_batiment()
+            {"label": i, "value": i} for i in get_batiment() if i is not None
         ]
+
+        # Mise a jour du tableau avec les dates de facturation
+        facturation_date = get_facturation_date()
+        outputs["facturation-date"]["columns"] = [
+            {"name": i, "id": i}
+            for i in list(facturation_date.columns)
+            if i is not None
+        ]
+        outputs["facturation-date"]["data"] = facturation_date.to_dict("records")
+        outputs["facturation-date"]["filter_action"] = "native"
 
         # TODO A REMETTRE UNE FOIS LES TESTS FINI
         # Date par defaut debut d'année a aujourd'hui
@@ -573,11 +617,14 @@ def dashboard_manager(
         outputs["select-type"]["options"] = [
             {"label": i, "value": i}
             for i in get_type_energie(name_client=trigger["value"])
+            if i is not None
         ]
 
         # récupération des batiments pour le selecteur
         outputs["select-bat"]["options"] = [
-            {"label": i, "value": i} for i in get_batiment(name_client=trigger["value"])
+            {"label": i, "value": i}
+            for i in get_batiment(name_client=trigger["value"])
+            if i is not None
         ]
 
         # Récupération des id_cpt pour le selecteur
@@ -588,6 +635,7 @@ def dashboard_manager(
                 name_bat=inputs["select-bat"]["value"],
                 type_energie=inputs["select-type"]["value"],
             )
+            if i is not None
         ]
 
         return outputs
@@ -605,6 +653,7 @@ def dashboard_manager(
                 type_energie=trigger["value"],
                 name_client=inputs["select-client"]["value"],
             )
+            if i is not None
         ]
 
         # Récupération des id_cpt pour le selecteur
@@ -615,6 +664,7 @@ def dashboard_manager(
                 name_bat=inputs["select-bat"]["value"],
                 type_energie=inputs["select-type"]["value"],
             )
+            if i is not None
         ]
 
         return outputs
@@ -633,6 +683,7 @@ def dashboard_manager(
                 name_bat=inputs["select-bat"]["value"],
                 type_energie=inputs["select-type"]["value"],
             )
+            if i is not None
         ]
 
         return outputs
@@ -665,7 +716,7 @@ def disconnect(outputs: Dict[str, Dict[str, Any]], inputs: Dict[str, Dict[str, A
     # TODO l'action de la deconnexion
     # Redirection
     outputs["url"]["pathname"] = "/login"
-    session["is_logged"] = False
+    logout_user()
     return outputs
 
 
@@ -681,4 +732,4 @@ dash_app.clientside_callback(
 
 if __name__ == "__main__":
     dash_app.enable_dev_tools(debug=True)
-    app.run(debug=True)
+    app.run(debug=True, port=8000)

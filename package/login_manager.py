@@ -4,13 +4,32 @@ Ce fichier va regrouper l'ensemble des fonctions de connexion
 
 # TODO garder en memoire les connexion et les deconnecter au bout d'un certrain temps
 
-from typing import Any, Dict
+from typing import Any, Dict, Type
 
 
 account = {"test": "mdp", "test2": "mdp"}
 
+from flask_login import UserMixin
 
-def is_logged(data: Dict[str, Any]) -> bool:
+
+class User(UserMixin):
+    Users = {}
+
+    def __init__(self, id, username, password) -> None:
+        super().__init__()
+        self.id = id
+        self.username = username
+        self.password = password
+        User.Users[id] = self
+
+    def get_user(id):
+        try:
+            return User.Users[id]
+        except:
+            return None
+
+
+def is_logged(current_user: User) -> bool:
     """Documentation
     Verifie si un utilisateur est connecté.
 
@@ -22,10 +41,7 @@ def is_logged(data: Dict[str, Any]) -> bool:
         False: l'utilistauer n'est pas connecté
     """
 
-    if "is_logged" not in data:
-        return False
-
-    return data["is_logged"]
+    return current_user.is_authenticated
 
 
 def msg_feedback(succes: int) -> str:
@@ -66,3 +82,7 @@ def check_password(username: str, password: str) -> int:
         pass
 
     return 2
+
+
+for username, password in account.items():
+    User(username, username, password)

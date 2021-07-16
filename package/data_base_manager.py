@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Dict, List, Union
 import pyodbc
 import pandas as pd
 import datetime
@@ -10,6 +10,18 @@ conn: pyodbc.Connection = pyodbc.connect(
     "DATABASE=Test;"
     "Trusted_Connection=yes;"
 )
+
+# Test Local
+config: Dict[str, str] = {
+    "table": {
+        "client": "Test.dbo.Clients",
+        "compteur": "Test.dbo.Compteurs",
+        "batiment": "Test.dbo.Batiments",
+        "compteur_batiment": "Test.dbo.Compteurs_Batiments",
+        "histo": "Test.dbo.Histo",
+        "base_temps": "Test.dbo.Base_temps",
+    }
+}
 
 
 def get_id_cpt(
@@ -29,7 +41,7 @@ def get_id_cpt(
     if client is None and type_energie is None and name_bat is None:
         # A REMETTRE pour selectionner les ID_CPT
         data: pd.DataFrame = pd.read_sql_query(
-            "select distinct Id_CPT from Test.dbo.Histo"
+            "select distinct Id_CPT from " + config["table"]["histo"] + " " +
             # "where Nom_client = '" + client + "'", # TODO A rajouter une fois la base client intégré
             " order by Id_CPT",
             conn,
@@ -40,49 +52,80 @@ def get_id_cpt(
         # )
         return list(data["Id_CPT"])
 
+    # Si client selectionné
     if type_energie is None and name_bat is None:
         data: pd.DataFrame = pd.read_sql_query(
-            "select distinct vc.Id_CPT from v_webApp_client vc where '"
+            "select distinct cpt.Id_CPT from "
+            + config["table"]["client"]
+            + " client, "
+            + config["table"]["compteur"]
+            + " cpt"
+            + " where '"
             + client
-            + "' = vc.Nom_Client",
+            + "' = client.[NOM CLIENT]"
+            + " and cpt.ID_CLIENT = client.ID_CLIENT",
             conn,
         )
         return list(data["Id_CPT"])
 
+    # Si type_energie selectionné et pas batiment
     if name_bat is None:
         if client is None:
             data: pd.DataFrame = pd.read_sql_query(
-                "select distinct vc.Id_CPT from v_webApp_client vc where '"
+                "select distinct cpt.Id_CPT from "
+                + config["table"]["compteur"]
+                + " cpt where '"
                 + type_energie
-                + "' = vc.Type_Energie",
+                + "' = cpt.[TYPE ENERGIE]",
                 conn,
             )
         else:
             data: pd.DataFrame = pd.read_sql_query(
-                "select distinct vc.Id_CPT from v_webApp_client vc where '"
+                "select distinct cpt.Id_CPT from "
+                + config["table"]["compteur"]
+                + " cpt, "
+                + config["table"]["client"]
+                + " client where '"
                 + type_energie
-                + "' = vc.Type_Energie "
-                + "and vc.Nom_Client = '"
+                + "' = cpt.[TYPE ENERGIE] "
+                + "and client.[NOM CLIENT] = '"
                 + client
-                + "'",
+                + "' and cpt.ID_CLIENT = client.ID_CLIENT",
                 conn,
             )
         return list(data["Id_CPT"])
 
+    # Si un client est selectionné
     if type_energie is None:
         data: pd.DataFrame = pd.read_sql_query(
-            "select distinct vc.Id_CPT from v_webApp_client vc where '"
+            "select distinct cpt.Id_CPT from "
+            + config["table"]["compteur"]
+            + " cpt, "
+            + config["table"]["compteur_batiment"]
+            + " cpt_bat, "
+            + config["table"]["batiment"]
+            + " bat where '"
             + name_bat
-            + "' = vc.Nom_Batiment",
+            + "' = bat.Nom_Batiment"
+            + " and cpt.Réfcpt = cpt_bat.Réfcpt"
+            + " and cpt_bat.RéfBatCPT = bat.[Réf Batiment]",
             conn,
         )
     else:
         data: pd.DataFrame = pd.read_sql_query(
-            "select distinct vc.Id_CPT from v_webApp_client vc where '"
-            + type_energie
-            + "' = vc.Type_Energie "
-            + "and vc.Nom_Batiment = '"
+            "select distinct cpt.Id_CPT from "
+            + config["table"]["compteur"]
+            + " cpt, "
+            + config["table"]["compteur_batiment"]
+            + " cpt_bat, "
+            + config["table"]["batiment"]
+            + " bat where '"
             + name_bat
+            + "' = bat.Nom_Batiment"
+            + " and cpt.Réfcpt = cpt_bat.Réfcpt"
+            + " and cpt_bat.RéfBatCPT = bat.[Réf Batiment]"
+            + " and cpt.[TYPE ENERGIE] = '"
+            + type_energie
             + "'",
             conn,
         )
@@ -98,35 +141,11 @@ def get_client(
 
     # if id_cpt is None and name_bat is None and type_energie is None:
     data: pd.DataFrame = pd.read_sql_query(
-        "select distinct Nom_Client from v_webApp_client", conn
-    )
-    return list(data["Nom_Client"])
-
-    if id_cpt is None and type_energie is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct vc.Nom_Client from v_webApp_client vc where '"
-            + name_bat
-            + "' = vc.Nom_Batiment",
-            conn,
-        )
-        return list(data["Nom_Client"])
-
-    if id_cpt is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct Nom_Client from v_webApp_client vc where '"
-            + type_energie
-            + "' = vc.Type_Energie",
-            conn,
-        )
-        return list(data["Nom_Client"])
-
-    data: pd.DataFrame = pd.read_sql(
-        "select distinct Nom_Client from v_webApp_client vc where '"
-        + id_cpt
-        + "' = vc.Id_CPT",
+        "select distinct client.[NOM CLIENT] Nom_Client from "
+        + config["table"]["client"]
+        + " client ",
         conn,
     )
-
     return list(data["Nom_Client"])
 
 
@@ -139,38 +158,11 @@ def get_type_energie(
     # if id_cpt is None and name_bat is None and name_client is None:
 
     data: pd.DataFrame = pd.read_sql_query(
-        "select distinct Type_Energie from v_webApp_client", conn
-    )
-    return list(data["Type_Energie"])
-
-    # Cas client selectionné
-    if id_cpt is None and name_bat is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct vc.Type_Energie from v_webApp_client vc where '"
-            + name_client
-            + "' = vc.Nom_Client",
-            conn,
-        )
-        return list(data["Type_Energie"])
-
-    # Cas Batiment selectionné
-    if id_cpt is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct Type_Energie from v_webApp_client vc where '"
-            + name_bat
-            + "' = vc.Nom_Batiment",
-            conn,
-        )
-        return list(data["Type_Energie"])
-
-    # Cas compteur selectionné
-    data: pd.DataFrame = pd.read_sql(
-        "select distinct Type_Energie from v_webApp_client vc where '"
-        + id_cpt
-        + "' = vc.Id_CPT",
+        "select distinct cpt.[TYPE ENERGIE] Type_Energie from "
+        + config["table"]["compteur"]
+        + " cpt ",
         conn,
     )
-
     return list(data["Type_Energie"])
 
 
@@ -366,6 +358,17 @@ def get_conso(
         pass
 
     # print(data)
+
+    return data
+
+
+def get_facturation_date():
+    data: pd.DataFrame = pd.read_sql_query(
+        "select Year(Date) Annee, Month(Date) Mois, Day(Date) Jour from Test.dbo.Base_temps where date_de_facturation = 'date facturation' order by Date",
+        conn,
+    )
+
+    data = data.apply(pd.to_numeric)
 
     return data
 
