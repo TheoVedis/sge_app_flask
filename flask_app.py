@@ -34,6 +34,8 @@ app.secret_key = random_secret_key(123)
 login_manager = LoginManager(app)
 current_user: User = current_user
 
+# Helllo
+
 
 @login_manager.user_loader
 def load_user(user_id):
