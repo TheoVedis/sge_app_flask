@@ -42,12 +42,12 @@ def load_user(user_id):
 
 @login_manager.unauthorized_handler
 def unauthorized_route():
-    return redirect(url_for("index"))
+    return index()
 
 
-@app.route("/", defaults={"path": ""})
-@app.route("/<path:path>")
-def index(path: str):
+# @app.route("/", defaults={"path": ""})
+# @app.route("/<path:path>")
+def index(path: str = None):
     """Documentation
     Redirige les utilisateurs
         soit vers la page de login
@@ -64,6 +64,14 @@ def index(path: str):
         return redirect(url_for(".login"))
 
     return redirect("/dashboard")
+
+
+@app.errorhandler(404)
+def test_error(err):
+    """Documentation
+    Déclenché en cas de page non trouvée, redirige automatiquement a l'index
+    """
+    return index()
 
 
 @app.route("/login", methods=["POST", "GET"])
@@ -83,7 +91,7 @@ def login():
     ############################
 
     if is_logged(current_user):
-        return redirect(url_for("index"))
+        return index()
 
     if request.method == "POST":
         # Acces via le bouton du formulaire de connexion
@@ -99,7 +107,7 @@ def login():
             # session["username"] = username
             user = User.get_user(username)
             login_user(user, remember=False)
-            return redirect(url_for("index"))
+            return index()
 
         error = msg_feedback(succes)
 
@@ -731,5 +739,11 @@ dash_app.clientside_callback(
 )
 
 if __name__ == "__main__":
-    dash_app.enable_dev_tools(debug=True)
-    app.run(debug=True, port=8000)
+    # Run pour le debug / developpement
+    # dash_app.enable_dev_tools(debug=True)
+    # app.run(debug=True, port=8000)
+
+    # Run une fois deployé
+    from waitress import serve
+
+    serve(app, host="0.0.0.0", port=8000)
