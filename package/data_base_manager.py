@@ -31,7 +31,7 @@ def get_id_cpt(
 ) -> List[str]:
     """Documentation
     Parametre:
-        client: le nom du client, du compte connecté s'il doit être restreint
+        client: l'intitule du client ([INTITULE CLIENT]), du compte connecté s'il doit être restreint
         # TODO enlever le None une fois la BD client
 
     Sortie:
@@ -41,9 +41,9 @@ def get_id_cpt(
     if client is None and type_energie is None and name_bat is None:
         # A REMETTRE pour selectionner les ID_CPT
         data: pd.DataFrame = pd.read_sql_query(
-            "select distinct Id_CPT from " + config["table"]["histo"] + " " +
-            # "where Nom_client = '" + client + "'", # TODO A rajouter une fois la base client intégré
-            " order by Id_CPT",
+            "select distinct Id_CPT from "
+            + config["table"]["histo"]
+            + " order by Id_CPT",
             conn,
         )
 
@@ -62,7 +62,7 @@ def get_id_cpt(
             + " cpt"
             + " where '"
             + client
-            + "' = client.[NOM CLIENT]"
+            + "' = client.[INTITULE CLIENT]"
             + " and cpt.ID_CLIENT = client.ID_CLIENT",
             conn,
         )
@@ -88,14 +88,14 @@ def get_id_cpt(
                 + " client where '"
                 + type_energie
                 + "' = cpt.[TYPE ENERGIE] "
-                + "and client.[NOM CLIENT] = '"
+                + "and client.[INTITULE CLIENT] = '"
                 + client
                 + "' and cpt.ID_CLIENT = client.ID_CLIENT",
                 conn,
             )
         return list(data["Id_CPT"])
 
-    # Si un client est selectionné
+    # Batiment selectionné
     if type_energie is None:
         data: pd.DataFrame = pd.read_sql_query(
             "select distinct cpt.Id_CPT from "
@@ -133,17 +133,36 @@ def get_id_cpt(
     return list(data["Id_CPT"])
 
 
+def get_groupe():
+    data: pd.DataFrame = pd.read_sql_query(
+        "select distinct [GROUPE] groupe from " + config["table"]["client"], conn
+    )
+    return list(data["groupe"])
+
+
 def get_client(
     id_cpt: Union[str, None] = None,
     name_bat: Union[str, None] = None,
     type_energie: Union[str, None] = None,
+    groupe: Union[str, None] = None,
 ) -> List[str]:
 
-    # if id_cpt is None and name_bat is None and type_energie is None:
+    if groupe is None:
+        data: pd.DataFrame = pd.read_sql_query(
+            "select distinct client.[INTITULE CLIENT] Nom_Client from "
+            + config["table"]["client"]
+            + " client ",
+            conn,
+        )
+        return list(data["Nom_Client"])
+
     data: pd.DataFrame = pd.read_sql_query(
-        "select distinct client.[NOM CLIENT] Nom_Client from "
+        "select distinct client.[INTITULE CLIENT] Nom_Client from "
         + config["table"]["client"]
-        + " client ",
+        + " client"
+        + " where client.[GROUPE] = '"
+        + groupe
+        + "'",
         conn,
     )
     return list(data["Nom_Client"])
@@ -154,8 +173,9 @@ def get_type_energie(
     name_bat: Union[str, None] = None,
     name_client: Union[str, None] = None,
 ) -> List[str]:
-    # Cas Aucune préselection
-    # if id_cpt is None and name_bat is None and name_client is None:
+    """Documentation
+    On selectionne les types d'energie sans prendre en considération les autres filtres
+    """
 
     data: pd.DataFrame = pd.read_sql_query(
         "select distinct cpt.[TYPE ENERGIE] Type_Energie from "
@@ -174,16 +194,21 @@ def get_batiment(
     # Cas Aucune préselection
     if id_cpt is None and type_energie is None and name_client is None:
         data: pd.DataFrame = pd.read_sql_query(
-            "select distinct Nom_Batiment from v_webApp_client", conn
+            "select distinct Nom_Batiment from " + config["table"]["batiment"], conn
         )
         return list(data["Nom_Batiment"])
 
     # Cas client selectionné
     if id_cpt is None and type_energie is None:
         data: pd.DataFrame = pd.read_sql_query(
-            "select distinct vc.Nom_Batiment from v_webApp_client vc where '"
+            "select distinct bat.Nom_Batiment from "
+            + config["table"]["batiment"]
+            + " bat, "
+            + config["table"]["client"]
+            + " client where '"
             + name_client
-            + "' = vc.Nom_Client",
+            + "' = client.[INTITULE CLIENT]"
+            + " and bat.Réfclient = client.Réfclient",
             conn,
         )
         return list(data["Nom_Batiment"])

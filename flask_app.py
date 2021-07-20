@@ -20,6 +20,7 @@ from package.data_base_manager import (
     get_conso,
     get_data,
     get_facturation_date,
+    get_groupe,
     get_id_cpt,
     get_type_energie,
 )
@@ -176,6 +177,12 @@ layout_main = html.Div(
                 html.Div(
                     className="filtre",
                     children=[
+                        dcc.Dropdown(
+                            id="select-groupe",
+                            multi=False,
+                            placeholder="Select groupe...",
+                            value=None,
+                        ),
                         dcc.Dropdown(
                             id="select-client",
                             multi=False,
@@ -339,6 +346,7 @@ outputs = [
     Output("url", "pathname"),
     Output("head-msg", "children"),
     # Selecteur (Filtre)
+    Output("select-groupe", "options"),
     Output("select-client", "options"),
     Output("select-type", "options"),
     Output("select-bat", "options"),
@@ -375,6 +383,7 @@ inputs = [
     Input("graph", "selectedData"),
     Input("tabs", "value"),
     Input("graph2", "selectedData"),
+    Input("select-groupe", "value"),
     Input("select-client", "value"),
     Input("select-type", "value"),
     Input("select-bat", "value"),
@@ -431,6 +440,11 @@ def dashboard_manager(
             {"label": i, "value": i} for i in get_id_cpt() if i is not None
         ]
 
+        # récupération des groupes pour le selecteur
+        outputs["select-groupe"]["options"] = [
+            {"label": i, "value": i} for i in get_groupe() if i is not None
+        ]
+
         # récupération des noms des clients pour le selecteur
         outputs["select-client"]["options"] = [
             {"label": i, "value": i} for i in get_client() if i is not None
@@ -477,6 +491,7 @@ def dashboard_manager(
 
     # Bouton validation des filtres
     if trigger["id"] == "filtre-valid.n_clicks":
+        # S'il manque des valeurs obligatoire non selectionné, on ne fait rien
         if (
             inputs["date-range-picker"]["start_date"] is None
             or inputs["date-range-picker"]["end_date"] is None
@@ -615,18 +630,23 @@ def dashboard_manager(
 
         return outputs
 
+    if trigger["id"] == "select-groupe.value":
+        if trigger["value"] is None or trigger["value"] == []:
+            pass
+
+        outputs["select-client"]["options"] = [
+            {"label": i, "value": i}
+            for i in get_client(groupe=trigger["value"])
+            if i is not None
+        ]
+
+        return outputs
+
     # Selection d'un client
     if trigger["id"] == "select-client.value":
         if trigger["value"] is None or trigger["value"] == []:
             # TODO update les autres filtres
             pass
-
-        # récupération des types d'energie pour le selecteur
-        outputs["select-type"]["options"] = [
-            {"label": i, "value": i}
-            for i in get_type_energie(name_client=trigger["value"])
-            if i is not None
-        ]
 
         # récupération des batiments pour le selecteur
         outputs["select-bat"]["options"] = [
@@ -740,10 +760,10 @@ dash_app.clientside_callback(
 
 if __name__ == "__main__":
     # Run pour le debug / developpement
-    # dash_app.enable_dev_tools(debug=True)
-    # app.run(debug=True, port=8000)
+    dash_app.enable_dev_tools(debug=True)
+    app.run(debug=True, port=8000)
 
     # Run une fois deployé
-    from waitress import serve
+    # from waitress import serve
 
-    serve(app, host="0.0.0.0", port=8000)
+    # serve(app, host="0.0.0.0", port=8000)
