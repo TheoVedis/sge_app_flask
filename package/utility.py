@@ -13,6 +13,7 @@ import plotly.graph_objs as go
 
 import dash
 from dash.dependencies import Input, Output, State
+from package.data_base_manager import get_facturation_date
 
 
 def dash_kwarg(
@@ -208,6 +209,13 @@ def table(data: pd.DataFrame, columns: Union[List[str], None] = None):
     # print(val)
 
     return [{"name": i, "id": i} for i in columns], val
+
+
+def is_facturation_date(date: str):
+    Annee, Mois, Jour = (int(i) for i in date.split("-"))
+    date_facturation = get_facturation_date()
+
+    return [Annee, Mois, Jour] in date_facturation.values.tolist()
 
 
 if __name__ == "__main__":

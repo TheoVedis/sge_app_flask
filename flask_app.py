@@ -25,7 +25,13 @@ from package.data_base_manager import (
     get_type_energie,
 )
 from package.login_manager import User, check_password, is_logged, msg_feedback
-from package.utility import dash_kwarg, graph, random_secret_key, table
+from package.utility import (
+    dash_kwarg,
+    graph,
+    is_facturation_date,
+    random_secret_key,
+    table,
+)
 
 app = Flask(
     __name__, static_folder="./assets/static/", template_folder="./assets/templates/"
@@ -223,7 +229,13 @@ layout_main = html.Div(
                             display_format="DD/MM/YYYY",
                             first_day_of_week=1,
                         ),
-                        html.Button(id="filtre-valid", children="valid"),
+                        html.Button(id="filtre-valid", children="valider"),
+                        html.P(
+                            id="warning-date-facturation",
+                            children="⚠ Les dates choisies ne sont pas des dates de facturation !",
+                            style={"margin": "1%", "color": "red", "display": "None"},
+                            hidden=True,
+                        ),
                         html.P(className="title", children=["Date Facturation"]),
                         html.Div(
                             children=dt.DataTable(
@@ -342,6 +354,8 @@ layout_main = html.Div(
 
 dash_app.layout = html.Div(children=[head, layout_main])
 
+facturation_date = get_facturation_date()
+
 outputs = [
     Output("url", "pathname"),
     Output("head-msg", "children"),
@@ -376,6 +390,8 @@ outputs = [
     Output("table2", "style_data"),
     Output("table2", "filter_action"),
     Output("table2", "filter_query"),
+    # warning-date-facturation
+    Output("warning-date-facturation", "style"),
 ]
 inputs = [
     Input("disconnect-btn", "n_clicks"),
@@ -388,15 +404,17 @@ inputs = [
     Input("select-type", "value"),
     Input("select-bat", "value"),
     Input("select-id_cpt", "value"),
+    # Actualisation du message warning-date-facturation
+    Input("date-range-picker", "end_date"),
+    Input("date-range-picker", "start_date"),
 ]
 states = [
     State("select-periode", "value"),
-    State("date-range-picker", "end_date"),
-    State("date-range-picker", "start_date"),
     State("table", "data"),
     State("table", "filter_query"),
     State("table2", "data"),
     State("table2", "filter_query"),
+    State("warning-date-facturation", "style"),
 ]
 
 
@@ -722,6 +740,37 @@ def dashboard_manager(
             # TODO update les autres filtres
             pass
         raise PreventUpdate
+
+    # Acualisation du message warning-date-facturation
+    if trigger["id"] == "date-range-picker.start_date":
+        if not is_facturation_date(trigger["value"]) or not is_facturation_date(
+            inputs["date-range-picker"]["end_date"]
+        ):
+            inputs["warning-date-facturation"]["style"].update({"display": "block"})
+            outputs["warning-date-facturation"]["style"] = inputs[
+                "warning-date-facturation"
+            ]["style"]
+        else:
+            inputs["warning-date-facturation"]["style"].update({"display": "None"})
+            outputs["warning-date-facturation"]["style"] = inputs[
+                "warning-date-facturation"
+            ]["style"]
+        return outputs
+
+    if trigger["id"] == "date-range-picker.end_date":
+        if not is_facturation_date(trigger["value"]) or not is_facturation_date(
+            inputs["date-range-picker"]["start_date"]
+        ):
+            inputs["warning-date-facturation"]["style"].update({"display": "block"})
+            outputs["warning-date-facturation"]["style"] = inputs[
+                "warning-date-facturation"
+            ]["style"]
+        else:
+            inputs["warning-date-facturation"]["style"].update({"display": "None"})
+            outputs["warning-date-facturation"]["style"] = inputs[
+                "warning-date-facturation"
+            ]["style"]
+        return outputs
 
     print("TRIGGER non géré !")
     raise PreventUpdate

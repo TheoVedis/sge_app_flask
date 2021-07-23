@@ -387,15 +387,22 @@ def get_conso(
     return data
 
 
+FACTURATION_DATE: pd.DataFrame = None
+
+
 def get_facturation_date():
-    data: pd.DataFrame = pd.read_sql_query(
-        "select Year(Date) Annee, Month(Date) Mois, Day(Date) Jour from Test.dbo.Base_temps where date_de_facturation = 'date facturation' order by Date",
-        conn,
-    )
+    global FACTURATION_DATE
+    if FACTURATION_DATE is None:
+        print("GET")
+        data: pd.DataFrame = pd.read_sql_query(
+            "select Year(Date) Annee, Month(Date) Mois, Day(Date) Jour from Test.dbo.Base_temps where date_de_facturation = 'date facturation' order by Date",
+            conn,
+        )
 
-    data = data.apply(pd.to_numeric)
+        data = data.apply(pd.to_numeric)
+        FACTURATION_DATE = data
 
-    return data
+    return FACTURATION_DATE
 
 
 if __name__ == "__main__":
