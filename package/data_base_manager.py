@@ -192,57 +192,24 @@ def get_batiment(
     name_client: Union[str, None] = None,
 ) -> List[str]:
     # Cas Aucune préselection
-    if id_cpt is None and type_energie is None and name_client is None:
+    if name_client is None:
         data: pd.DataFrame = pd.read_sql_query(
             "select distinct Nom_Batiment from " + config["table"]["batiment"], conn
         )
         return list(data["Nom_Batiment"])
 
     # Cas client selectionné
-    if id_cpt is None and type_energie is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct bat.Nom_Batiment from "
-            + config["table"]["batiment"]
-            + " bat, "
-            + config["table"]["client"]
-            + " client where '"
-            + name_client
-            + "' = client.[INTITULE CLIENT]"
-            + " and bat.Réfclient = client.Réfclient",
-            conn,
-        )
-        return list(data["Nom_Batiment"])
-
-    # Cas type_energie selectionné
-    if id_cpt is None:
-        if name_client is None:
-            data: pd.DataFrame = pd.read_sql_query(
-                "select distinct Nom_Batiment from v_webApp_client vc where '"
-                + type_energie
-                + "' = vc.Type_Energie",
-                conn,
-            )
-        else:
-            data: pd.DataFrame = pd.read_sql_query(
-                "select distinct Nom_Batiment from v_webApp_client vc where '"
-                + type_energie
-                + "' = vc.Type_Energie"
-                + " and vc.Nom_Client = '"
-                + name_client
-                + "'",
-                conn,
-            )
-
-        return list(data["Nom_Batiment"])
-
-    # Cas compteur selectionné
-    data: pd.DataFrame = pd.read_sql(
-        "select distinct Nom_Batiment from v_webApp_client vc where '"
-        + id_cpt
-        + "' = vc.Id_CPT",
+    data: pd.DataFrame = pd.read_sql_query(
+        "select distinct bat.Nom_Batiment from "
+        + config["table"]["batiment"]
+        + " bat, "
+        + config["table"]["client"]
+        + " client where '"
+        + name_client
+        + "' = client.[INTITULE CLIENT]"
+        + " and bat.Réfclient = client.Réfclient",
         conn,
     )
-
     return list(data["Nom_Batiment"])
 
 
@@ -393,7 +360,6 @@ FACTURATION_DATE: pd.DataFrame = None
 def get_facturation_date():
     global FACTURATION_DATE
     if FACTURATION_DATE is None:
-        print("GET")
         data: pd.DataFrame = pd.read_sql_query(
             "select Year(Date) Annee, Month(Date) Mois, Day(Date) Jour from Test.dbo.Base_temps where date_de_facturation = 'date facturation' order by Date",
             conn,

@@ -233,18 +233,54 @@ layout_main = html.Div(
                         html.P(
                             id="warning-date-facturation",
                             children="⚠ Les dates choisies ne sont pas des dates de facturation !",
-                            style={"margin": "1%", "color": "red", "display": "None"},
-                            hidden=True,
+                            style={"margin": "1%", "color": "red", "display": "block"},
                         ),
                         html.P(className="title", children=["Date Facturation"]),
                         html.Div(
-                            children=dt.DataTable(
-                                id="facturation-date",
-                                style_as_list_view=True,
-                                style_cell={"text-align": "center"},
-                                page_size=5,
-                            ),
-                            style={"margin": "1%"},
+                            children=[
+                                html.H4(children="Date de début"),
+                                dcc.Dropdown(
+                                    id="date-facturation-start-annee",
+                                    multi=False,
+                                    placeholder="Annee",
+                                    value=None,
+                                ),
+                                dcc.Dropdown(
+                                    id="date-facturation-start-mois",
+                                    multi=False,
+                                    placeholder="Mois",
+                                    value=None,
+                                ),
+                                dcc.Dropdown(
+                                    id="date-facturation-start-jour",
+                                    multi=False,
+                                    placeholder="Jour",
+                                    value=None,
+                                ),
+                            ],
+                        ),
+                        html.Div(
+                            children=[
+                                html.H4(children="Date de fin"),
+                                dcc.Dropdown(
+                                    id="date-facturation-end-annee",
+                                    multi=False,
+                                    placeholder="Annee",
+                                    value=None,
+                                ),
+                                dcc.Dropdown(
+                                    id="date-facturation-end-mois",
+                                    multi=False,
+                                    placeholder="Mois",
+                                    value=None,
+                                ),
+                                dcc.Dropdown(
+                                    id="date-facturation-end-jour",
+                                    multi=False,
+                                    placeholder="Jour",
+                                    value=None,
+                                ),
+                            ],
                         ),
                     ],
                 ),
@@ -369,9 +405,12 @@ outputs = [
     Output("date-range-picker", "start_date"),
     Output("date-range-picker", "end_date"),
     # Date facturation
-    Output("facturation-date", "data"),
-    Output("facturation-date", "columns"),
-    Output("facturation-date", "filter_action"),
+    Output("date-facturation-start-annee", "options"),
+    Output("date-facturation-start-mois", "options"),
+    Output("date-facturation-start-jour", "options"),
+    Output("date-facturation-end-annee", "options"),
+    Output("date-facturation-end-mois", "options"),
+    Output("date-facturation-end-jour", "options"),
     # Afficher / cacher les filtres en fonction de l'onglet
     Output("select-periode", "style"),
     ############# Tab1 #############
@@ -407,6 +446,13 @@ inputs = [
     # Actualisation du message warning-date-facturation
     Input("date-range-picker", "end_date"),
     Input("date-range-picker", "start_date"),
+    # Trigger selection date de facturation
+    Input("date-facturation-start-annee", "value"),
+    Input("date-facturation-start-mois", "value"),
+    Input("date-facturation-start-jour", "value"),
+    Input("date-facturation-end-annee", "value"),
+    Input("date-facturation-end-mois", "value"),
+    Input("date-facturation-end-jour", "value"),
 ]
 states = [
     State("select-periode", "value"),
@@ -454,39 +500,29 @@ def dashboard_manager(
         outputs["head-msg"]["children"] = "Bienvenue " + str(current_user.username)
 
         # recupération des id_cpt pour le selecteur
-        outputs["select-id_cpt"]["options"] = [
-            {"label": i, "value": i} for i in get_id_cpt() if i is not None
-        ]
+        outputs["select-id_cpt"]["options"] = value_to_dropdown(get_id_cpt())
 
         # récupération des groupes pour le selecteur
-        outputs["select-groupe"]["options"] = [
-            {"label": i, "value": i} for i in get_groupe() if i is not None
-        ]
+        outputs["select-groupe"]["options"] = value_to_dropdown(get_groupe())
 
         # récupération des noms des clients pour le selecteur
-        outputs["select-client"]["options"] = [
-            {"label": i, "value": i} for i in get_client() if i is not None
-        ]
+        outputs["select-client"]["options"] = value_to_dropdown(get_client())
 
         # récupération des types d'energie pour le selecteur
-        outputs["select-type"]["options"] = [
-            {"label": i, "value": i} for i in get_type_energie() if i is not None
-        ]
+        outputs["select-type"]["options"] = value_to_dropdown(get_type_energie())
 
         # récupération des batiments pour le selecteur
-        outputs["select-bat"]["options"] = [
-            {"label": i, "value": i} for i in get_batiment() if i is not None
-        ]
+        outputs["select-bat"]["options"] = value_to_dropdown(get_batiment())
 
-        # Mise a jour du tableau avec les dates de facturation
-        facturation_date = get_facturation_date()
-        outputs["facturation-date"]["columns"] = [
-            {"name": i, "id": i}
-            for i in list(facturation_date.columns)
-            if i is not None
-        ]
-        outputs["facturation-date"]["data"] = facturation_date.to_dict("records")
-        outputs["facturation-date"]["filter_action"] = "native"
+        # Update date de facturation dropdow
+        date_facturation: pd.DataFrame = get_facturation_date()
+        outputs["date-facturation-start-annee"]["options"] = value_to_dropdown(
+            set(date_facturation["Annee"].values)
+        )
+
+        outputs["date-facturation-end-annee"]["options"] = value_to_dropdown(
+            set(date_facturation["Annee"].values)
+        )
 
         # TODO A REMETTRE UNE FOIS LES TESTS FINI
         # Date par defaut debut d'année a aujourd'hui
@@ -509,154 +545,27 @@ def dashboard_manager(
 
     # Bouton validation des filtres
     if trigger["id"] == "filtre-valid.n_clicks":
-        # S'il manque des valeurs obligatoire non selectionné, on ne fait rien
-        if (
-            inputs["date-range-picker"]["start_date"] is None
-            or inputs["date-range-picker"]["end_date"] is None
-            or inputs["select-id_cpt"]["value"] is None
-        ):
-            raise PreventUpdate
-
-        start_date: datetime.datetime = datetime.datetime.strptime(
-            inputs["date-range-picker"]["start_date"], "%Y-%m-%d"
-        )
-        end_date: datetime.datetime = datetime.datetime.strptime(
-            inputs["date-range-picker"]["end_date"], "%Y-%m-%d"
-        )
-
-        # Tab 1:
-        if inputs["tabs"]["value"] == "tab1":
-            data: pd.DataFram = get_data(
-                inputs["select-id_cpt"]["value"],
-                start_date,
-                end_date,
-            )
-            outputs["graph"]["figure"] = graph(
-                inputs["select-id_cpt"]["value"], data, mode="markers"
-            )
-
-            # Tableau
-            outputs["table"]["columns"], outputs["table"]["data"] = table(data)
-            outputs["table"]["filter_action"] = "native"
-
-        # Tab2:
-        if inputs["tabs"]["value"] == "tab2":
-            print(inputs["select-periode"]["value"])
-            data: pd.DataFrame = get_conso(
-                inputs["select-id_cpt"]["value"],
-                start_date,
-                end_date,
-                inputs["select-periode"]["value"],
-            )
-
-            outputs["graph2"]["figure"] = graph(
-                inputs["select-id_cpt"]["value"],
-                data,
-                x="TS",
-                y="Conso",
-                title="Consomation",
-                xlabel=inputs["select-periode"]["value"],
-                ylabel="Consomation",
-            )
-            outputs["table2"]["columns"], outputs["table2"]["data"] = table(data)
-            outputs["table2"]["filter_action"] = "native"
-
-        # Tab3:
-        if inputs["tabs"]["value"] == "tab3":
-            # TODO : TAB3, filtre seulement pour le SGE et choisir le client => affichage de ses informations
-            # Encore a définir
-            # Client: filtre bloqué sur le client concerné
-            print("TAB 3 pas encore prete")
-            raise PreventUpdate
-
-        return outputs
+        return valid_filter(outputs, inputs)
 
     # Mise en evidence des points selectionner sur le graph valeur index
     if trigger["id"] == "graph.selectedData":
-
-        style_cond = [{"if": {"column_id": "Index"}, "display": "None"}]
-        style_cond = []
-        # Filter pour afficher seulement les valeurs selectionné en premier
-        filter_query = ""
-        if inputs["graph"]["selectedData"] is None:
-            pass
-        else:
-            for point in inputs["graph"]["selectedData"]["points"]:
-                style_cond += [
-                    {
-                        "if": {
-                            # "column_id": "Index",
-                            "filter_query": "{{Index}} = {}".format(
-                                point["customdata"][0]
-                            ),
-                        },
-                        "backgroundColor": "rgb(255, 255, 0)",
-                        "color": "black",
-                    }
-                ]
-                filter_query += "{Index}= " + str(point["customdata"][0]) + " or "
-            filter_query = filter_query[:-4]
-
-        outputs["table"]["style_data_conditional"] = style_cond
-        outputs["table"]["filter_query"] = filter_query
-
-        # TODO Choisir les colonnes interressante a afficher selon SGE et CLIENT
-        # Colonne index utile pour la jointure entre le graph et le tableau
-
-        return outputs
+        return highlight_point(outputs, inputs, "graph", "table")
 
     # Mise en evidence des points selectionner sur le graph2 consommation
     if trigger["id"] == "graph2.selectedData":
-        style_cond = [{"if": {"column_id": "Index"}, "display": "None"}]
-        style_cond = []
-        # Filter pour afficher seulement les valeurs selectionné en premier
-        filter_query = ""
-        if inputs["graph2"]["selectedData"] is None:
-            pass
-        else:
-            for point in inputs["graph2"]["selectedData"]["points"]:
-                style_cond += [
-                    {
-                        "if": {
-                            # "column_id": "Index",
-                            "filter_query": "{{Index}} = {}".format(
-                                point["customdata"][0]
-                            ),
-                        },
-                        "backgroundColor": "rgb(255, 255, 0)",
-                        "color": "black",
-                    }
-                ]
-                filter_query += "{Index}= " + str(point["customdata"][0]) + " or "
-            filter_query = filter_query[:-4]
-
-        outputs["table2"]["style_data_conditional"] = style_cond
-        outputs["table2"]["filter_query"] = filter_query
-
-        return outputs
+        return highlight_point(outputs, inputs, "graph2", "table2")
 
     # Changement de tabs
     if trigger["id"] == "tabs.value":
-        if trigger["value"] == "tab1":
-            outputs["select-periode"]["style"] = {"display": "None"}
-
-        if trigger["value"] == "tab2":
-            outputs["select-periode"]["style"] = {"display": "block"}
-
-        if trigger["value"] == "tab3":
-            pass
-
-        return outputs
+        return change_tab(outputs, inputs, trigger["value"])
 
     if trigger["id"] == "select-groupe.value":
         if trigger["value"] is None or trigger["value"] == []:
             pass
 
-        outputs["select-client"]["options"] = [
-            {"label": i, "value": i}
-            for i in get_client(groupe=trigger["value"])
-            if i is not None
-        ]
+        outputs["select-client"]["options"] = value_to_dropdown(
+            get_client(groupe=trigger["value"])
+        )
 
         return outputs
 
@@ -667,22 +576,18 @@ def dashboard_manager(
             pass
 
         # récupération des batiments pour le selecteur
-        outputs["select-bat"]["options"] = [
-            {"label": i, "value": i}
-            for i in get_batiment(name_client=trigger["value"])
-            if i is not None
-        ]
+        outputs["select-bat"]["options"] = value_to_dropdown(
+            get_batiment(name_client=trigger["value"])
+        )
 
         # Récupération des id_cpt pour le selecteur
-        outputs["select-id_cpt"]["options"] = [
-            {"label": i, "value": i}
-            for i in get_id_cpt(
+        outputs["select-id_cpt"]["options"] = value_to_dropdown(
+            get_id_cpt(
                 client=inputs["select-client"]["value"],
                 name_bat=inputs["select-bat"]["value"],
                 type_energie=inputs["select-type"]["value"],
             )
-            if i is not None
-        ]
+        )
 
         return outputs
 
@@ -693,25 +598,21 @@ def dashboard_manager(
             pass
 
         # récupération des batiments pour le selecteur
-        outputs["select-bat"]["options"] = [
-            {"label": i, "value": i}
-            for i in get_batiment(
+        outputs["select-bat"]["options"] = value_to_dropdown(
+            get_batiment(
                 type_energie=trigger["value"],
                 name_client=inputs["select-client"]["value"],
             )
-            if i is not None
-        ]
+        )
 
         # Récupération des id_cpt pour le selecteur
-        outputs["select-id_cpt"]["options"] = [
-            {"label": i, "value": i}
-            for i in get_id_cpt(
+        outputs["select-id_cpt"]["options"] = value_to_dropdown(
+            get_id_cpt(
                 client=inputs["select-client"]["value"],
                 name_bat=inputs["select-bat"]["value"],
                 type_energie=inputs["select-type"]["value"],
             )
-            if i is not None
-        ]
+        )
 
         return outputs
 
@@ -722,15 +623,13 @@ def dashboard_manager(
             pass
 
         # Récupération des id_cpt pour le selecteur
-        outputs["select-id_cpt"]["options"] = [
-            {"label": i, "value": i}
-            for i in get_id_cpt(
+        outputs["select-id_cpt"]["options"] = value_to_dropdown(
+            get_id_cpt(
                 client=inputs["select-client"]["value"],
                 name_bat=inputs["select-bat"]["value"],
                 type_energie=inputs["select-type"]["value"],
             )
-            if i is not None
-        ]
+        )
 
         return outputs
 
@@ -743,33 +642,100 @@ def dashboard_manager(
 
     # Acualisation du message warning-date-facturation
     if trigger["id"] == "date-range-picker.start_date":
-        if not is_facturation_date(trigger["value"]) or not is_facturation_date(
-            inputs["date-range-picker"]["end_date"]
-        ):
-            inputs["warning-date-facturation"]["style"].update({"display": "block"})
-            outputs["warning-date-facturation"]["style"] = inputs[
-                "warning-date-facturation"
-            ]["style"]
-        else:
-            inputs["warning-date-facturation"]["style"].update({"display": "None"})
-            outputs["warning-date-facturation"]["style"] = inputs[
-                "warning-date-facturation"
-            ]["style"]
-        return outputs
+        return hide_date_warning(
+            outputs,
+            inputs,
+            display=(
+                not is_facturation_date(inputs["date-range-picker"]["end_date"])
+                or not is_facturation_date(inputs["date-range-picker"]["start_date"])
+            ),
+        )
 
     if trigger["id"] == "date-range-picker.end_date":
-        if not is_facturation_date(trigger["value"]) or not is_facturation_date(
-            inputs["date-range-picker"]["start_date"]
-        ):
-            inputs["warning-date-facturation"]["style"].update({"display": "block"})
-            outputs["warning-date-facturation"]["style"] = inputs[
-                "warning-date-facturation"
-            ]["style"]
-        else:
-            inputs["warning-date-facturation"]["style"].update({"display": "None"})
-            outputs["warning-date-facturation"]["style"] = inputs[
-                "warning-date-facturation"
-            ]["style"]
+        return hide_date_warning(
+            outputs,
+            inputs,
+            display=(
+                not is_facturation_date(inputs["date-range-picker"]["end_date"])
+                or not is_facturation_date(inputs["date-range-picker"]["start_date"])
+            ),
+        )
+
+    # Selection date de facturation
+    if trigger["id"] == "date-facturation-start-annee.value":
+        date_facturation: pd.DataFrame = get_facturation_date()
+        outputs["date-facturation-start-mois"]["options"] = value_to_dropdown(
+            date_facturation[date_facturation["Annee"] == trigger["value"]][
+                "Mois"
+            ].values
+        )
+
+        return outputs
+
+    if trigger["id"] == "date-facturation-start-mois.value":
+        date_facturation: pd.DataFrame = get_facturation_date()
+
+        year_date = date_facturation[
+            date_facturation["Annee"] == inputs["date-facturation-start-annee"]["value"]
+        ]
+
+        outputs["date-facturation-start-jour"]["options"] = value_to_dropdown(
+            year_date[year_date["Mois"] == trigger["value"]]["Jour"].values
+        )
+
+        return outputs
+
+    if trigger["id"] == "date-facturation-start-jour.value":
+        date_facturation: pd.DataFrame = get_facturation_date()
+
+        year: str = str(inputs["date-facturation-start-annee"]["value"])
+        month: str = str(inputs["date-facturation-start-mois"]["value"])
+        day: str = str(trigger["value"])
+
+        outputs["date-range-picker"]["start_date"] = "-".join([year, month, day])
+        outputs = hide_date_warning(
+            outputs,
+            inputs,
+            display=not is_facturation_date(inputs["date-range-picker"]["end_date"]),
+        )
+        return outputs
+
+    if trigger["id"] == "date-facturation-end-annee.value":
+        date_facturation: pd.DataFrame = get_facturation_date()
+        outputs["date-facturation-end-mois"]["options"] = value_to_dropdown(
+            date_facturation[date_facturation["Annee"] == trigger["value"]][
+                "Mois"
+            ].values
+        )
+
+        return outputs
+
+    if trigger["id"] == "date-facturation-end-mois.value":
+        date_facturation: pd.DataFrame = get_facturation_date()
+
+        year_date = date_facturation[
+            date_facturation["Annee"] == inputs["date-facturation-end-annee"]["value"]
+        ]
+
+        outputs["date-facturation-end-jour"]["options"] = value_to_dropdown(
+            year_date[year_date["Mois"] == trigger["value"]]["Jour"].values
+        )
+
+        return outputs
+
+    if trigger["id"] == "date-facturation-end-jour.value":
+        date_facturation: pd.DataFrame = get_facturation_date()
+
+        year: str = str(inputs["date-facturation-end-annee"]["value"])
+        month: str = str(inputs["date-facturation-end-mois"]["value"])
+        day: str = str(trigger["value"])
+
+        outputs["date-range-picker"]["end_date"] = "-".join([year, month, day])
+        outputs = hide_date_warning(
+            outputs,
+            inputs,
+            display=not is_facturation_date(inputs["date-range-picker"]["start_date"]),
+        )
         return outputs
 
     print("TRIGGER non géré !")
@@ -794,6 +760,198 @@ def disconnect(outputs: Dict[str, Dict[str, Any]], inputs: Dict[str, Dict[str, A
     # Redirection
     outputs["url"]["pathname"] = "/login"
     logout_user()
+    return outputs
+
+
+def value_to_dropdown(values: list):
+    """Documentation
+    Mets en forme une liste de valeur pour correspondre a la structure des dropdown de dash
+
+    Parameter:
+        values: Liste de valeurs
+
+    Sortie:
+        liste de dictionnaire label/value
+
+    """
+    return [{"label": i, "value": i} for i in values if i is not None]
+
+
+def valid_filter(outputs: Dict[str, Dict[str, Any]], inputs: Dict[str, Dict[str, Any]]):
+    """Documentation
+    Vérifie s'il manque des valeurs dans les filtres et affiche les informations
+
+    Parameter:
+        outputs: Dictionnaire des sorties format callback
+        inputs: Dictionnaire des entrées format callback
+
+    Sortie:
+        outputs: Les sorties mises a jours
+    """
+    # S'il manque des valeurs obligatoire non selectionné, on ne fait rien
+    if (
+        inputs["date-range-picker"]["start_date"] is None
+        or inputs["date-range-picker"]["end_date"] is None
+        or inputs["select-id_cpt"]["value"] is None
+    ):
+        raise PreventUpdate
+
+    start_date: datetime.datetime = datetime.datetime.strptime(
+        inputs["date-range-picker"]["start_date"], "%Y-%m-%d"
+    )
+    end_date: datetime.datetime = datetime.datetime.strptime(
+        inputs["date-range-picker"]["end_date"], "%Y-%m-%d"
+    )
+
+    # Tab 1:
+    if inputs["tabs"]["value"] == "tab1":
+        data: pd.DataFram = get_data(
+            inputs["select-id_cpt"]["value"],
+            start_date,
+            end_date,
+        )
+        outputs["graph"]["figure"] = graph(
+            inputs["select-id_cpt"]["value"], data, mode="markers"
+        )
+
+        # Tableau
+        outputs["table"]["columns"], outputs["table"]["data"] = table(data)
+        outputs["table"]["filter_action"] = "native"
+
+    # Tab2:
+    if inputs["tabs"]["value"] == "tab2":
+        print(inputs["select-periode"]["value"])
+        data: pd.DataFrame = get_conso(
+            inputs["select-id_cpt"]["value"],
+            start_date,
+            end_date,
+            inputs["select-periode"]["value"],
+        )
+
+        outputs["graph2"]["figure"] = graph(
+            inputs["select-id_cpt"]["value"],
+            data,
+            x="TS",
+            y="Conso",
+            title="Consomation",
+            xlabel=inputs["select-periode"]["value"],
+            ylabel="Consomation",
+        )
+        outputs["table2"]["columns"], outputs["table2"]["data"] = table(data)
+        outputs["table2"]["filter_action"] = "native"
+
+    # Tab3:
+    if inputs["tabs"]["value"] == "tab3":
+        # TODO : TAB3, filtre seulement pour le SGE et choisir le client => affichage de ses informations
+        # Encore a définir
+        # Client: filtre bloqué sur le client concerné
+        print("TAB 3 pas encore prete")
+        raise PreventUpdate
+
+    return outputs
+
+
+def highlight_point(
+    outputs: Dict[str, Dict[str, Any]],
+    inputs: Dict[str, Dict[str, Any]],
+    graph_name: str,
+    table_name: str,
+):
+    """Documentation
+    Mise en surbrillance les valeurs selectionnées sur le graphique dans le tableau.
+
+    Parameter:
+        outputs: Dictionnaire des sorties format callback
+        inputs: Dictionnaire des entrées format callback
+        graph_name: Nom du graphique
+        table_name: Nom de la table où les valeurs seront mise en evidence
+
+    Sortie:
+        outputs: Les sorties mises a jours
+    """
+    style_cond = [{"if": {"column_id": "Index"}, "display": "None"}]
+    style_cond = []
+    # Filter pour afficher seulement les valeurs selectionné en premier
+    filter_query = ""
+    if inputs[graph_name]["selectedData"] is None:
+        pass
+    else:
+        for point in inputs[graph_name]["selectedData"]["points"]:
+            style_cond += [
+                {
+                    "if": {
+                        # "column_id": "Index",
+                        "filter_query": "{{Index}} = {}".format(point["customdata"][0]),
+                    },
+                    "backgroundColor": "rgb(255, 255, 0)",
+                    "color": "black",
+                }
+            ]
+            filter_query += "{Index}= " + str(point["customdata"][0]) + " or "
+        filter_query = filter_query[:-4]
+
+    outputs[table_name]["style_data_conditional"] = style_cond
+    outputs[table_name]["filter_query"] = filter_query
+
+    # TODO Choisir les colonnes interressante a afficher selon SGE et CLIENT
+    # Colonne index utile pour la jointure entre le graph et le tableau
+
+    return outputs
+
+
+def change_tab(
+    outputs: Dict[str, Dict[str, Any]], inputs: Dict[str, Dict[str, Any]], tab: str
+):
+    """Documentation
+    Gestion du changement d'onglet
+
+    Parameter:
+        outputs: Dictionnaire des sorties format callback
+        inputs: Dictionnaire des entrées format callback
+        tab: Nom de l'onglet
+
+    Sortie:
+        outputs: Les sorties mises a jours
+    """
+    if tab == "tab1":
+        outputs["select-periode"]["style"] = {"display": "None"}
+
+    elif tab == "tab2":
+        outputs["select-periode"]["style"] = {"display": "block"}
+
+    elif tab == "tab3":
+        pass
+
+    return outputs
+
+
+def hide_date_warning(
+    outputs: Dict[str, Dict[str, Any]], inputs: Dict[str, Dict[str, Any]], display: bool
+):
+    """Documentation
+    Affiche / cache le message d'avertissement des dates de facturation
+
+    Parameter:
+        outputs: Dictionnaire des sorties format callback
+        inputs: Dictionnaire des entrées format callback
+        display: True : L'affiche
+                 False : Le cache
+
+    Sortie:
+        outputs: Les sorties mises a jours
+    """
+    if display:
+        inputs["warning-date-facturation"]["style"].update({"display": "block"})
+        outputs["warning-date-facturation"]["style"] = inputs[
+            "warning-date-facturation"
+        ]["style"]
+
+    else:
+        inputs["warning-date-facturation"]["style"].update({"display": "None"})
+        outputs["warning-date-facturation"]["style"] = inputs[
+            "warning-date-facturation"
+        ]["style"]
+
     return outputs
 
 
