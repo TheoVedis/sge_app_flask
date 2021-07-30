@@ -2,14 +2,13 @@
 Ce fichier va regrouper l'ensemble des fonctions de connexion
 """
 
-# TODO garder en memoire les connexion et les deconnecter au bout d'un certrain temps
-
 from typing import Any, Dict, Type
 
-
-account = {"test": "mdp", "test2": "mdp"}
-
+import pandas as pd
 from flask_login import UserMixin
+from package.data_base_manager import get_client_name_from_ref
+
+account: pd.DataFrame = pd.read_csv("base_clients.csv", dtype=str)
 
 
 class User(UserMixin):
@@ -20,6 +19,7 @@ class User(UserMixin):
         self.id = id
         self.username = username
         self.password = password
+        self.name = get_client_name_from_ref(self.id)
         User.Users[id] = self
 
     def get_user(id):
@@ -27,6 +27,9 @@ class User(UserMixin):
             return User.Users[id]
         except:
             return None
+
+    def is_admin(self) -> bool:
+        return self.id == "29"
 
 
 def is_logged(current_user: User) -> bool:
@@ -77,12 +80,12 @@ def check_password(username: str, password: str) -> int:
         2: Nom d'utilisateur inconnue
     """
     try:
-        return int(account[username] != password)
-    except KeyError:
+        return int(User.get_user(username).password != password)
+    except AttributeError:
         pass
 
     return 2
 
 
-for username, password in account.items():
-    User(username, username, password)
+for i, row in account.iterrows():
+    User(row["REF"], row["NOM"], row["MDP"])

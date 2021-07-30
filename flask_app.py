@@ -392,12 +392,15 @@ dash_app.layout = html.Div(children=[head, layout_main])
 
 facturation_date = get_facturation_date()
 
+# Important ordonner les outputs par compononent ID
 outputs = [
     Output("url", "pathname"),
     Output("head-msg", "children"),
     # Selecteur (Filtre)
     Output("select-groupe", "options"),
+    Output("select-groupe", "style"),  # Cacher groupe
     Output("select-client", "options"),
+    Output("select-client", "style"),  # Cacher client
     Output("select-type", "options"),
     Output("select-bat", "options"),
     Output("select-id_cpt", "options"),
@@ -499,20 +502,31 @@ def dashboard_manager(
 
         outputs["head-msg"]["children"] = "Bienvenue " + str(current_user.username)
 
+        client = None
+        if not current_user.is_admin():
+            client = current_user.name
+            # Affichage des selecteur SGE
+            outputs["select-groupe"]["style"] = {"display": "None"}
+            outputs["select-client"]["style"] = {"display": "None"}
+        else:
+            # récupération des groupes pour le selecteur
+            outputs["select-groupe"]["options"] = value_to_dropdown(get_groupe())
+
+            # récupération des noms des clients pour le selecteur
+            outputs["select-client"]["options"] = value_to_dropdown(get_client())
+
         # recupération des id_cpt pour le selecteur
-        outputs["select-id_cpt"]["options"] = value_to_dropdown(get_id_cpt())
-
-        # récupération des groupes pour le selecteur
-        outputs["select-groupe"]["options"] = value_to_dropdown(get_groupe())
-
-        # récupération des noms des clients pour le selecteur
-        outputs["select-client"]["options"] = value_to_dropdown(get_client())
+        outputs["select-id_cpt"]["options"] = value_to_dropdown(
+            get_id_cpt(client=client)
+        )
 
         # récupération des types d'energie pour le selecteur
         outputs["select-type"]["options"] = value_to_dropdown(get_type_energie())
 
         # récupération des batiments pour le selecteur
-        outputs["select-bat"]["options"] = value_to_dropdown(get_batiment())
+        outputs["select-bat"]["options"] = value_to_dropdown(
+            get_batiment(name_client=client)
+        )
 
         # Update date de facturation dropdow
         date_facturation: pd.DataFrame = get_facturation_date()
@@ -560,24 +574,42 @@ def dashboard_manager(
         return change_tab(outputs, inputs, trigger["value"])
 
     if trigger["id"] == "select-groupe.value":
-        if trigger["value"] is None or trigger["value"] == []:
-            pass
+        # si l'utilisateur n'est pas admin, il ne peut pas selectionner de groupe
+        if not current_user.is_admin():
+            raise PreventUpdate
 
         outputs["select-client"]["options"] = value_to_dropdown(
             get_client(groupe=trigger["value"])
+        )
+
+        outputs["select-bat"]["options"] = value_to_dropdown(
+            get_batiment(
+                group=trigger["value"], name_client=inputs["select-client"]["value"]
+            )
+        )
+
+        outputs["select-id_cpt"]["options"] = value_to_dropdown(
+            get_id_cpt(
+                group=trigger["value"],
+                type_energie=inputs["select-type"]["value"],
+                client=inputs["select-client"]["value"],
+                name_bat=inputs["select-bat"]["value"],
+            )
         )
 
         return outputs
 
     # Selection d'un client
     if trigger["id"] == "select-client.value":
-        if trigger["value"] is None or trigger["value"] == []:
-            # TODO update les autres filtres
-            pass
+        # si l'utilisateur n'est pas admin il ne peut pas selectionner de client
+        if not current_user.is_admin():
+            raise PreventUpdate
 
         # récupération des batiments pour le selecteur
         outputs["select-bat"]["options"] = value_to_dropdown(
-            get_batiment(name_client=trigger["value"])
+            get_batiment(
+                name_client=trigger["value"], group=inputs["select-groupe"]["value"]
+            )
         )
 
         # Récupération des id_cpt pour le selecteur
@@ -593,22 +625,23 @@ def dashboard_manager(
 
     # Selection d'un type d'energie
     if trigger["id"] == "select-type.value":
-        if trigger["value"] is not None and not trigger["value"] == []:
-            # TODO update les autres filtres
-            pass
+        client = inputs["select-client"]["value"]
+
+        if not current_user.is_admin():
+            client = current_user.name
 
         # récupération des batiments pour le selecteur
-        outputs["select-bat"]["options"] = value_to_dropdown(
-            get_batiment(
-                type_energie=trigger["value"],
-                name_client=inputs["select-client"]["value"],
-            )
-        )
+        # outputs["select-bat"]["options"] = value_to_dropdown(
+        #     get_batiment(
+        #         type_energie=trigger["value"],
+        #         name_client=inputs["select-client"]["value"],
+        #     )
+        # )
 
         # Récupération des id_cpt pour le selecteur
         outputs["select-id_cpt"]["options"] = value_to_dropdown(
             get_id_cpt(
-                client=inputs["select-client"]["value"],
+                client=client,
                 name_bat=inputs["select-bat"]["value"],
                 type_energie=inputs["select-type"]["value"],
             )
@@ -618,14 +651,15 @@ def dashboard_manager(
 
     # Selection d'un batiment
     if trigger["id"] == "select-bat.value":
-        if trigger["value"] is not None and not trigger["value"] == []:
-            # TODO update les autres filtres
-            pass
+        client = inputs["select-client"]["value"]
+
+        if not current_user.is_admin():
+            client = current_user.name
 
         # Récupération des id_cpt pour le selecteur
         outputs["select-id_cpt"]["options"] = value_to_dropdown(
             get_id_cpt(
-                client=inputs["select-client"]["value"],
+                client=client,
                 name_bat=inputs["select-bat"]["value"],
                 type_energie=inputs["select-type"]["value"],
             )
