@@ -282,6 +282,14 @@ layout_main = html.Div(
                                 ),
                             ],
                         ),
+                        # Sert a rallonger le menu des filtres pour s'adapter a des écrans plus petit
+                        html.H4(
+                            children="",
+                            style={
+                                "padding-top": "100%",
+                                "display": "block",
+                            },
+                        ),
                     ],
                 ),
             ],
@@ -999,12 +1007,17 @@ dash_app.clientside_callback(
     Input("sideMenu-btn", "n_clicks"),
 )
 
+
 if __name__ == "__main__":
+    with app.app_context():
+        # S'execute une fois le serveur lancé
+        print("Serveur initialisé")
+
     # Run pour le debug / developpement
-    dash_app.enable_dev_tools(debug=True)
-    app.run(debug=True, port=8000)
+    # dash_app.enable_dev_tools(debug=True)
+    # app.run(debug=True, port=8000)
 
     # Run une fois deployé
-    # from waitress import serve
+    from waitress import serve
 
-    # serve(app, host="0.0.0.0", port=8000)
+    serve(app, host="0.0.0.0", port=8000)
