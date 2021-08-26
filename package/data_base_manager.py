@@ -16,7 +16,7 @@ conn2: pyodbc.Connection = conn
 # Test Local
 config: Dict[str, str] = {
     "table": {
-        "client": "Test.dbo.Clients",
+        "client": "Test.dbo.Liste_Clients",
         "compteur": "Test.dbo.Compteurs",
         "batiment": "Test.dbo.Batiments",
         "compteur_batiment": "Test.dbo.Compteurs_Batiments",
@@ -28,7 +28,7 @@ config: Dict[str, str] = {
 # SQL Server
 # config: Dict[str, str] = {
 #     "table": {
-#         "client": "Access_SGE.dbo.Clients",
+#         "client": "Access_SGE.dbo.Liste_Clients",
 #         "compteur": "Access_SGE.dbo.Compteurs",
 #         "batiment": "Access_SGE.dbo.Batiments",
 #         "compteur_batiment": "Access_SGE.dbo.Compteurs_Batiments",
@@ -38,6 +38,26 @@ config: Dict[str, str] = {
 # }
 
 # TODO rajouter groupe a id_cpt / batiment
+
+
+def get_login_pwd() -> pd.DataFrame:
+    """Documentation
+    Accede a la BD et récupere les information nécessaire a la connexion
+
+    Sortie:
+        Renvoie le dataframe contenant l'id, le groupe et le mot de passe associer a chaque utilisateur
+    """
+
+    data: pd.DataFrame = pd.read_sql_query(
+        "select distinct client.[ID USER] id, client.[PWD] pwd from "
+        + config["table"]["client"]
+        + " client"
+        + " where"
+        + " client.[Accès WEB] = 1",
+        conn2,
+    )
+
+    return data
 
 
 def get_client_name_from_ref(ref: str) -> str:
@@ -51,12 +71,12 @@ def get_client_name_from_ref(ref: str) -> str:
         L'intitule du client
     """
     data: pd.DataFrame = pd.read_sql_query(
-        "select client.[INTITULE CLIENT] NOM from "
+        "select client.[NOM CLIENT FACTURE] NOM from "
         + config["table"]["client"]
         + " client "
         + " where '"
         + ref
-        + "' = client.[ID_CLIENT]",
+        + "' = client.[N° CLIENT FACTURE]",
         conn2,
     )
 
@@ -77,13 +97,12 @@ def get_id_cpt(
 ) -> List[str]:
     """Documentation
     Parametre:
-        client: l'intitule du client ([INTITULE CLIENT]), du compte connecté s'il doit être restreint
+        client: l'intitule du client ([NOM CLIENT FACTURE]), du compte connecté s'il doit être restreint
 
     Sortie:
         la liste des id des compteurs
     """
     if client is None and type_energie is None and name_bat is None and group is None:
-        # A REMETTRE pour selectionner les ID_CPT
         data: pd.DataFrame = pd.read_sql_query(
             "select distinct Id_CPT from "
             + config["table"]["histo"]
@@ -91,9 +110,6 @@ def get_id_cpt(
             conn,
         )
 
-        # data: pd.DataFrame = pd.read_sql_query(
-        #     "select distinct name from Test.dbo.extratanomalies order by name", conn
-        # )
         return list(data["Id_CPT"])
 
     # Si group non None
@@ -106,8 +122,8 @@ def get_id_cpt(
             + " cpt"
             + " where '"
             + group
-            + "' = client.[GROUPE]"
-            + " and cpt.ID_CLIENT = client.ID_CLIENT",
+            + "' = client.[ID USER]"
+            + " and cpt.ID_CLIENT = client.[N° CLIENT FACTURE]",
             conn2,
         )
         return list(data["Id_CPT"])
@@ -122,8 +138,8 @@ def get_id_cpt(
             + " cpt"
             + " where '"
             + client
-            + "' = client.[INTITULE CLIENT]"
-            + " and cpt.ID_CLIENT = client.ID_CLIENT",
+            + "' = client.[NOM CLIENT FACTURE]"
+            + " and cpt.ID_CLIENT = client.[N° CLIENT FACTURE]",
             conn2,
         )
         return list(data["Id_CPT"])
@@ -148,9 +164,9 @@ def get_id_cpt(
                 + " client where '"
                 + type_energie
                 + "' = cpt.[TYPE ENERGIE] "
-                + "and client.[INTITULE CLIENT] = '"
+                + "and client.[NOM CLIENT FACTURE] = '"
                 + client
-                + "' and cpt.ID_CLIENT = client.ID_CLIENT",
+                + "' and cpt.ID_CLIENT = client.[N° CLIENT FACTURE]",
                 conn2,
             )
         return list(data["Id_CPT"])
@@ -161,14 +177,11 @@ def get_id_cpt(
             "select distinct cpt.Id_CPT from "
             + config["table"]["compteur"]
             + " cpt, "
-            + config["table"]["compteur_batiment"]
-            + " cpt_bat, "
             + config["table"]["batiment"]
             + " bat where '"
             + name_bat
             + "' = bat.Nom_Batiment"
-            + " and cpt.Réfcpt = cpt_bat.Réfcpt"
-            + " and cpt_bat.RéfBatCPT = bat.[Réf Batiment]",
+            + " and cpt.[Réf Batiment] =  bat.[Réf Batiment]",
             conn2,
         )
     else:
@@ -176,14 +189,11 @@ def get_id_cpt(
             "select distinct cpt.Id_CPT from "
             + config["table"]["compteur"]
             + " cpt, "
-            + config["table"]["compteur_batiment"]
-            + " cpt_bat, "
             + config["table"]["batiment"]
             + " bat where '"
             + name_bat
             + "' = bat.Nom_Batiment"
-            + " and cpt.Réfcpt = cpt_bat.Réfcpt"
-            + " and cpt_bat.RéfBatCPT = bat.[Réf Batiment]"
+            + " and cpt.[Réf Batiment] = bat.[Réf Batiment]"
             + " and cpt.[TYPE ENERGIE] = '"
             + type_energie
             + "'",
@@ -195,7 +205,7 @@ def get_id_cpt(
 
 def get_groupe():
     data: pd.DataFrame = pd.read_sql_query(
-        "select distinct [GROUPE] groupe from " + config["table"]["client"], conn
+        "select distinct [ID USER] groupe from " + config["table"]["client"], conn
     )
     return list(data["groupe"])
 
@@ -204,12 +214,12 @@ def get_client(
     id_cpt: Union[str, None] = None,
     name_bat: Union[str, None] = None,
     type_energie: Union[str, None] = None,
-    groupe: Union[str, None] = None,
+    group: Union[str, None] = None,
 ) -> List[str]:
 
-    if groupe is None:
+    if group is None:
         data: pd.DataFrame = pd.read_sql_query(
-            "select distinct client.[INTITULE CLIENT] Nom_Client from "
+            "select distinct client.[NOM CLIENT FACTURE] Nom_Client from "
             + config["table"]["client"]
             + " client ",
             conn2,
@@ -217,11 +227,11 @@ def get_client(
         return list(data["Nom_Client"])
 
     data: pd.DataFrame = pd.read_sql_query(
-        "select distinct client.[INTITULE CLIENT] Nom_Client from "
+        "select distinct client.[NOM CLIENT FACTURE] Nom_Client from "
         + config["table"]["client"]
         + " client"
-        + " where client.[GROUPE] = '"
-        + groupe
+        + " where client.[ID USER] = '"
+        + group
         + "'",
         conn2,
     )
@@ -267,7 +277,7 @@ def get_batiment(
             + config["table"]["client"]
             + " client where '"
             + group
-            + "' = client.[GROUPE]"
+            + "' = client.[ID USER]"
             + " and bat.Réfclient = client.Réfclient",
             conn2,
         )
@@ -281,7 +291,7 @@ def get_batiment(
         + config["table"]["client"]
         + " client where '"
         + name_client
-        + "' = client.[INTITULE CLIENT]"
+        + "' = client.[NOM CLIENT FACTURE]"
         + " and bat.Réfclient = client.Réfclient",
         conn2,
     )
@@ -321,21 +331,6 @@ def get_data(
         + " order by TS, Id_CPT",
         conn,
     )
-
-    # Requete sur la base avec les anomalies
-    # data: pd.DataFrame = pd.read_sql_query(
-    #     "select Chrono, Name Id_CPT, Value, Quality, TS, Anomalie, Type_Anomalie from"
-    #     " Test.dbo.extratanomalies"
-    #     " where TS >= '"
-    #     + startDate.strftime("%d/%m/%Y")
-    #     + "' and TS <= '"
-    #     + endDate.strftime("%d/%m/%Y")
-    #     + "' and name in ('"
-    #     + "','".join(id_cpt)
-    #     + "')"
-    #     + " order by TS, name",
-    #     conn,
-    # )
 
     return data
 

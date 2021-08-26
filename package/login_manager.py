@@ -6,20 +6,20 @@ from typing import Any, Dict, Type
 
 import pandas as pd
 from flask_login import UserMixin
-from package.data_base_manager import get_client_name_from_ref
+from package.data_base_manager import get_login_pwd
 
-account: pd.DataFrame = pd.read_csv("base_clients.csv", dtype=str)
+account: pd.DataFrame = get_login_pwd()
 
 
 class User(UserMixin):
     Users = {}
 
-    def __init__(self, id, username, password) -> None:
+    def __init__(self, id, group, password) -> None:
         super().__init__()
         self.id = id
-        self.username = username
+        self.username = id
         self.password = password
-        self.name = get_client_name_from_ref(self.id)
+        self.name = group
         User.Users[id] = self
 
     def get_user(id):
@@ -29,7 +29,7 @@ class User(UserMixin):
             return None
 
     def is_admin(self) -> bool:
-        return self.id == "29"
+        return self.id == "SGE"
 
 
 def is_logged(current_user: User) -> bool:
@@ -88,4 +88,4 @@ def check_password(username: str, password: str) -> int:
 
 
 for i, row in account.iterrows():
-    User(row["REF"], row["NOM"], row["MDP"])
+    User(row["id"], row["id"], row["pwd"])
