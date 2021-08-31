@@ -44,11 +44,17 @@ current_user: User = current_user
 
 @login_manager.user_loader
 def load_user(user_id):
+    """Documentation
+    Initialisation des utilisateurs
+    """
     return User.get_user(user_id)
 
 
 @login_manager.unauthorized_handler
 def unauthorized_route():
+    """Documentation
+    Cette fonction se déclenche lors d'un accès a une route non authorisé.
+    """
     return index()
 
 
