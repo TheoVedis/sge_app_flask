@@ -43,18 +43,49 @@ config: Dict[str, Dict[str, str]] = {
 """
 
 # SQL Server
-# config: Dict[str, str] = {
-#     "table": {
-#         "client": "Access_SGE.dbo.Liste_Clients",
-#         "compteur": "Access_SGE.dbo.Compteurs",
-#         "batiment": "Access_SGE.dbo.Batiments",
-#         "compteur_batiment": "Access_SGE.dbo.Compteurs_Batiments",
-#         "histo": "BigData.dbo.Table_Index_Histo",
-#         "base_temps": "BigData.dbo.Base_TempsSGE",
-#     }
-# }
+config: Dict[str, Dict[str, str]] = {
+    "table": {
+        "client": {
+            "nom_table": "Access_SGE.dbo.Liste_Clients",
+            "ref": "REF_CLIENT",
+            "id": "[N_CLIENT_FACTURE]",
+            "groupe": "[ID USER]",
+            "acces": "[Accès WEB]",
+            "mot_de_passe": "[PWD]",
+        },
+        "compteur": {
+            "nom_table": "Access_SGE.dbo.Compteurs",
+            "id_cpt": "[ID_CPT]",
+            "id_client": "[ID_CLIENT]",
+            "nom_batiment": "BATIMENTS_COMPTES",
+        },
+        "batiment": {
+            "nom_table": "Access_SGE.dbo.Batiments",
+            "ref": "REF_BATIMENT",
+            "ref_client": "REF_CLIENT",
+            "nom": "NOM_BATIMENT",
+        },
+        "histo": {
+            "nom_table": "BigData.dbo.Table_Index_Histo",
+            "temps": "TS",
+            "id_cpt": "ID_CPT",
+            "anomalie": "ANOMALIE",
+            "DJU": "DJU",
+            "type_anomalie": "TYPE_ANOMALIE",
+            "index_corrige": "INDEX_CORRIGE",
+            "valeur": "VALUE",
+        },
+        "base_temps": {
+            "nom_table": "BigData.dbo.Base_TempsSGE",
+            "type": "DATE_DE_FACTURATION",
+            "date": "DATE",
+        },
+    }
+}
+
 
 # TODO rajouter groupe a id_cpt / batiment
+# TODO probleme selecteur type d'energie, tout les compteurs
 
 
 def get_login_pwd() -> pd.DataFrame:
@@ -64,6 +95,8 @@ def get_login_pwd() -> pd.DataFrame:
     Sortie:
         Renvoie le dataframe contenant l'id, le groupe et le mot de passe associer a chaque utilisateur
     """
+
+    request = "select distinct"
 
     data: pd.DataFrame = pd.read_sql_query(
         "select distinct client.[ID USER] id, client.[PWD] pwd from "

@@ -355,45 +355,45 @@ layout_main = html.Div(
                                 ),
                             ],
                         ),
-                        dcc.Tab(
-                            label="Consomation",
-                            value="tab2",
-                            children=[
-                                dcc.Graph(id="graph2", figure={}),
-                                dt.DataTable(
-                                    id="table2",
-                                    export_format="csv",
-                                    sort_action="native",
-                                    # filter_action="native",
-                                    style_as_list_view=True,
-                                    style_cell={"padding": "5px"},
-                                    style_header={
-                                        "backgroundColor": "rgb(230, 230, 230)",
-                                        "fontWeight": "bold",
-                                    },
-                                    page_size=30,
-                                    row_selectable="multi",
-                                    style_header_conditional=[
-                                        # {
-                                        #     "if": {"column_id": "Index"},
-                                        #     "display": "None",
-                                        # }
-                                    ],
-                                    style_data_conditional=[
-                                        # Probleme cacher la colonne index décale les filtres
-                                        # {
-                                        #     "if": {"column_id": "Index"},
-                                        #     "display": "None",
-                                        # }
-                                    ],
-                                ),
-                            ],
-                        ),
-                        dcc.Tab(
-                            label="Information",
-                            value="tab3",
-                            children=["Hey la page 3"],
-                        ),
+                        # dcc.Tab(
+                        #     label="Consomation",
+                        #     value="tab2",
+                        #     children=[
+                        #         dcc.Graph(id="graph2", figure={}),
+                        #         dt.DataTable(
+                        #             id="table2",
+                        #             export_format="csv",
+                        #             sort_action="native",
+                        #             # filter_action="native",
+                        #             style_as_list_view=True,
+                        #             style_cell={"padding": "5px"},
+                        #             style_header={
+                        #                 "backgroundColor": "rgb(230, 230, 230)",
+                        #                 "fontWeight": "bold",
+                        #             },
+                        #             page_size=30,
+                        #             row_selectable="multi",
+                        #             style_header_conditional=[
+                        #                 # {
+                        #                 #     "if": {"column_id": "Index"},
+                        #                 #     "display": "None",
+                        #                 # }
+                        #             ],
+                        #             style_data_conditional=[
+                        #                 # Probleme cacher la colonne index décale les filtres
+                        #                 # {
+                        #                 #     "if": {"column_id": "Index"},
+                        #                 #     "display": "None",
+                        #                 # }
+                        #             ],
+                        #         ),
+                        #     ],
+                        # ),
+                        # dcc.Tab(
+                        #     label="Information",
+                        #     value="tab3",
+                        #     children=["Hey la page 3"],
+                        # ),
                     ],
                 ),
             ],
@@ -439,13 +439,13 @@ outputs = [
     Output("table", "filter_action"),
     Output("table", "filter_query"),
     ############# Tab2 #############
-    Output("graph2", "figure"),
-    Output("table2", "style_data_conditional"),
-    Output("table2", "columns"),
-    Output("table2", "data"),
-    Output("table2", "style_data"),
-    Output("table2", "filter_action"),
-    Output("table2", "filter_query"),
+    # Output("graph2", "figure"),
+    # Output("table2", "style_data_conditional"),
+    # Output("table2", "columns"),
+    # Output("table2", "data"),
+    # Output("table2", "style_data"),
+    # Output("table2", "filter_action"),
+    # Output("table2", "filter_query"),
     # warning-date-facturation
     Output("warning-date-facturation", "style"),
 ]
@@ -454,7 +454,7 @@ inputs = [
     Input("filtre-valid", "n_clicks"),
     Input("graph", "selectedData"),
     Input("tabs", "value"),
-    Input("graph2", "selectedData"),
+    # Input("graph2", "selectedData"),
     Input("select-groupe", "value"),
     Input("select-client", "value"),
     Input("select-type", "value"),
@@ -475,8 +475,8 @@ states = [
     State("select-periode", "value"),
     State("table", "data"),
     State("table", "filter_query"),
-    State("table2", "data"),
-    State("table2", "filter_query"),
+    # State("table2", "data"),
+    # State("table2", "filter_query"),
     State("warning-date-facturation", "style"),
 ]
 
@@ -591,7 +591,7 @@ def dashboard_manager(
             raise PreventUpdate
 
         outputs["select-client"]["options"] = value_to_dropdown(
-            get_client(groupe=trigger["value"])
+            get_client(group=trigger["value"])
         )
 
         outputs["select-bat"]["options"] = value_to_dropdown(
@@ -1012,10 +1012,10 @@ if __name__ == "__main__":
         print("Serveur initialisé")
 
     # Run pour le debug / developpement
-    # dash_app.enable_dev_tools(debug=True)
-    # app.run(debug=True, port=8000)
+    dash_app.enable_dev_tools(debug=True)
+    app.run(debug=True, port=8000)
 
     # Run une fois deployé
-    from waitress import serve
+    # from waitress import serve
 
-    serve(app, host="0.0.0.0", port=8000)
+    # serve(app, host="0.0.0.0", port=8000)
