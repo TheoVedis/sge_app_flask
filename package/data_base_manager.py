@@ -3,6 +3,8 @@ import pyodbc
 import pandas as pd
 import datetime
 
+from package.request_manager import Request, Condition
+
 # Param de connection
 conn: pyodbc.Connection = pyodbc.connect(
     "driver={SQL Server};"
@@ -18,20 +20,41 @@ config: Dict[str, Dict[str, str]] = {
     "table": {
         "client": {
             "nom_table": "Test.dbo.Liste_Clients",
-            "id": "[ID_CLIENT]",
+            "ref": "REF_CLIENT",
+            "id": "[N_CLIENT_FACTURE]",
+            "nom": "[NOM CLIENT FACTURE]",
             "groupe": "[ID USER]",
-            "acces": "[Accès WEB]",
+            "acces": "[ACCES_WEB]",
             "mot_de_passe": "[PWD]",
         },
         "compteur": {
             "nom_table": "Test.dbo.Compteurs",
             "id_cpt": "[ID_CPT]",
             "id_client": "[ID_CLIENT]",
+            "nom_batiment": "[BATIMENTS_COMPTES]",
+            "type_energie": "[TYPE ENERGIE]",
         },
-        "batiment": {"nom_table": "Test.dbo.Batiments"},
-        "compteur_batiment": {"nom_table": "Test.dbo.Compteurs_Batiments"},
-        "histo": {"nom_table": "Test.dbo.Histo"},
-        "base_temps": {"nom_table": "Test.dbo.Base_temps"},
+        "batiment": {
+            "nom_table": "Test.dbo.Batiments",
+            "ref": "REF_BATIMENT",
+            "ref_client": "REF_CLIENT",
+            "nom": "NOM_BATIMENT",
+        },
+        "histo": {
+            "nom_table": "Test.dbo.Histo",
+            "temps": "TS",
+            "id_cpt": "ID_CPT",
+            "anomalie": "ANOMALIE",
+            "DJU": "DJU",
+            "type_anomalie": "TYPE_ANOMALIE",
+            "index_corrige": "INDEX_CORRIGE",
+            "valeur": "VALUE",
+        },
+        "base_temps": {
+            "nom_table": "Test.dbo.Base_temps",
+            "type": "DATE_DE_FACTURATION",
+            "date": "DATE",
+        },
     }
 }
 
@@ -43,49 +66,47 @@ config: Dict[str, Dict[str, str]] = {
 """
 
 # SQL Server
-config: Dict[str, Dict[str, str]] = {
-    "table": {
-        "client": {
-            "nom_table": "Access_SGE.dbo.Liste_Clients",
-            "ref": "REF_CLIENT",
-            "id": "[N_CLIENT_FACTURE]",
-            "groupe": "[ID USER]",
-            "acces": "[Accès WEB]",
-            "mot_de_passe": "[PWD]",
-        },
-        "compteur": {
-            "nom_table": "Access_SGE.dbo.Compteurs",
-            "id_cpt": "[ID_CPT]",
-            "id_client": "[ID_CLIENT]",
-            "nom_batiment": "BATIMENTS_COMPTES",
-        },
-        "batiment": {
-            "nom_table": "Access_SGE.dbo.Batiments",
-            "ref": "REF_BATIMENT",
-            "ref_client": "REF_CLIENT",
-            "nom": "NOM_BATIMENT",
-        },
-        "histo": {
-            "nom_table": "BigData.dbo.Table_Index_Histo",
-            "temps": "TS",
-            "id_cpt": "ID_CPT",
-            "anomalie": "ANOMALIE",
-            "DJU": "DJU",
-            "type_anomalie": "TYPE_ANOMALIE",
-            "index_corrige": "INDEX_CORRIGE",
-            "valeur": "VALUE",
-        },
-        "base_temps": {
-            "nom_table": "BigData.dbo.Base_TempsSGE",
-            "type": "DATE_DE_FACTURATION",
-            "date": "DATE",
-        },
-    }
-}
-
-
-# TODO rajouter groupe a id_cpt / batiment
-# TODO probleme selecteur type d'energie, tout les compteurs
+# config: Dict[str, Dict[str, str]] = {
+#     "table": {
+#         "client": {
+#             "nom_table": "Access_SGE.dbo.Liste_Clients",
+#             "ref": "REF_CLIENT",
+#             "id": "[N_CLIENT_FACTURE]",
+#             "nom": "[NOM CLIENT FACTURE]",
+#             "groupe": "[ID USER]",
+#             "acces": "[ACCES_WEB]",
+#             "mot_de_passe": "[PWD]",
+#         },
+#         "compteur": {
+#             "nom_table": "Access_SGE.dbo.Compteurs",
+#             "id_cpt": "[ID_CPT]",
+#             "id_client": "[ID_CLIENT]",
+#             "nom_batiment": "BATIMENTS_COMPTES",
+#             "type_energie": "[TYPE ENERGIE]",
+#         },
+#         "batiment": {
+#             "nom_table": "Access_SGE.dbo.Batiments",
+#             "ref": "REF_BATIMENT",
+#             "ref_client": "REF_CLIENT",
+#             "nom": "NOM_BATIMENT",
+#         },
+#         "histo": {
+#             "nom_table": "BigData.dbo.Table_Index_Histo",
+#             "temps": "TS",
+#             "id_cpt": "ID_CPT",
+#             "anomalie": "ANOMALIE",
+#             "DJU": "DJU",
+#             "type_anomalie": "TYPE_ANOMALIE",
+#             "index_corrige": "INDEX_CORRIGE",
+#             "valeur": "VALUE",
+#         },
+#         "base_temps": {
+#             "nom_table": "BigData.dbo.Base_TempsSGE",
+#             "type": "DATE_DE_FACTURATION",
+#             "date": "DATE",
+#         },
+#     }
+# }
 
 
 def get_login_pwd() -> pd.DataFrame:
@@ -96,20 +117,24 @@ def get_login_pwd() -> pd.DataFrame:
         Renvoie le dataframe contenant l'id, le groupe et le mot de passe associer a chaque utilisateur
     """
 
-    request = "select distinct"
-
-    data: pd.DataFrame = pd.read_sql_query(
-        "select distinct client.[ID USER] id, client.[PWD] pwd from "
-        + config["table"]["client"]["nom_table"]
-        + " client"
-        + " where"
-        + " client.[Accès WEB] = 1",
-        conn2,
+    request = (
+        Request(distinct=True)
+        .add_selector("client.{}".format(config["table"]["client"]["groupe"]), "id")
+        .add_selector(
+            "client.{}".format(config["table"]["client"]["mot_de_passe"]), "pwd"
+        )
+        .add_table(config["table"]["client"]["nom_table"], "client")
+        .add_condition(
+            Condition("client.{} = 1".format(config["table"]["client"]["acces"]), "AND")
+        )
     )
+
+    data: pd.DataFrame = request.run(conn2)
 
     return data
 
 
+# DEPRECIATED
 def get_client_name_from_ref(ref: str) -> str:
     """Documentation
     A partir d'un ref client renvoie l'Intitule du client correspondant
@@ -152,113 +177,107 @@ def get_id_cpt(
     Sortie:
         la liste des id des compteurs
     """
+
     if client is None and type_energie is None and name_bat is None and group is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct Id_CPT from "
-            + config["table"]["histo"]["nom_table"]
-            + " order by Id_CPT",
-            conn,
-        )
-
-        return list(data["Id_CPT"])
-
-    # Si group non None
-    if client is None and type_energie is None and name_bat is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct cpt.Id_CPT from "
-            + config["table"]["client"]["nom_table"]
-            + " client, "
-            + config["table"]["compteur"]["nom_table"]
-            + " cpt"
-            + " where '"
-            + group
-            + "' = client.[ID USER]"
-            + " and cpt.ID_CLIENT = client.[N° CLIENT FACTURE]",
-            conn2,
-        )
-        return list(data["Id_CPT"])
-
-    # Si client selectionné
-    if type_energie is None and name_bat is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct cpt.Id_CPT from "
-            + config["table"]["client"]["nom_table"]
-            + " client, "
-            + config["table"]["compteur"]["nom_table"]
-            + " cpt"
-            + " where '"
-            + client
-            + "' = client.[NOM CLIENT FACTURE]"
-            + " and cpt.ID_CLIENT = client.[N° CLIENT FACTURE]",
-            conn2,
-        )
-        return list(data["Id_CPT"])
-
-    # Si type_energie selectionné et pas batiment
-    if name_bat is None:
-        if client is None:
-            data: pd.DataFrame = pd.read_sql_query(
-                "select distinct cpt.Id_CPT from "
-                + config["table"]["compteur"]["nom_table"]
-                + " cpt where '"
-                + type_energie
-                + "' = cpt.[TYPE ENERGIE]",
-                conn2,
+        request = (
+            Request(distinct=True)
+            .add_selector(
+                "histo.{}".format(config["table"]["histo"]["id_cpt"]), "Id_CPT"
             )
-        else:
-            data: pd.DataFrame = pd.read_sql_query(
-                "select distinct cpt.Id_CPT from "
-                + config["table"]["compteur"]["nom_table"]
-                + " cpt, "
-                + config["table"]["client"]["nom_table"]
-                + " client where '"
-                + type_energie
-                + "' = cpt.[TYPE ENERGIE] "
-                + "and client.[NOM CLIENT FACTURE] = '"
-                + client
-                + "' and cpt.ID_CLIENT = client.[N° CLIENT FACTURE]",
-                conn2,
-            )
+            .add_table(config["table"]["histo"]["nom_table"], "histo")
+            .set_order_by("Id_CPT")
+        )
+
+        data: pd.DataFrame = request.run(conn)
+
         return list(data["Id_CPT"])
 
-    # Batiment selectionné
-    if type_energie is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct cpt.Id_CPT from "
-            + config["table"]["compteur"]["nom_table"]
-            + " cpt, "
-            + config["table"]["batiment"]["nom_table"]
-            + " bat where '"
-            + name_bat
-            + "' = bat.Nom_Batiment"
-            + " and cpt.[Réf Batiment] =  bat.[Réf Batiment]",
-            conn2,
+    request = (
+        Request(distinct=True)
+        .add_selector("cpt.{}".format(config["table"]["compteur"]["id_cpt"]), "Id_CPT")
+        .add_table(config["table"]["compteur"]["nom_table"], "cpt")
+        .set_order_by("Id_CPT")
+    )
+
+    if client is not None or group is not None:
+        # Lien entre la table cpt et client
+        request.add_table(
+            config["table"]["client"]["nom_table"], "client"
+        ).add_condition(
+            Condition(
+                "cpt.{} = client.{}".format(
+                    config["table"]["compteur"]["id_client"],
+                    config["table"]["client"]["id"],
+                ),
+                "AND",
+            ),
         )
-    else:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct cpt.Id_CPT from "
-            + config["table"]["compteur"]["nom_table"]
-            + " cpt, "
-            + config["table"]["batiment"]["nom_table"]
-            + " bat where '"
-            + name_bat
-            + "' = bat.Nom_Batiment"
-            + " and cpt.[Réf Batiment] = bat.[Réf Batiment]"
-            + " and cpt.[TYPE ENERGIE] = '"
-            + type_energie
-            + "'",
-            conn2,
+
+    # Condition sur le groupe
+    if group is not None:
+        request.add_condition(
+            Condition(
+                "client.{} = '{}'".format(config["table"]["client"]["groupe"], group),
+                "AND",
+            )
         )
+
+    # Condition sur le client
+    if client is not None:
+        request.add_condition(
+            Condition(
+                "client.{} = '{}'".format(config["table"]["client"]["nom"], client),
+                "AND",
+            )
+        )
+
+    # Condition sur le type d'énergie
+    if type_energie is not None:
+        request.add_condition(
+            Condition(
+                "cpt.{} = '{}'".format(
+                    config["table"]["compteur"]["type_energie"], type_energie
+                ),
+                "AND",
+            )
+        )
+
+    if name_bat is not None:
+        # Jointure des tables batiment et compteur
+        # request.add_table(config["table"]["batiment"]["nom_table"], "bat")
+        # request.add_condition(
+        #     Condition(
+        #         "cpt.{} = bat.{}".format(
+        #             config["table"]["compteur"]["nom_batiment"],
+        #             config["table"]["batiment"]["nom"],
+        #         ),
+        #         "AND",
+        #     )
+        # )
+
+        request.add_condition(
+            Condition(
+                "cpt.{} = '{}'".format(
+                    config["table"]["compteur"]["nom_batiment"], name_bat
+                )
+            )
+        )
+
+    data: pd.DataFrame = request.run(conn2)
 
     return list(data["Id_CPT"])
 
 
 def get_groupe():
-    data: pd.DataFrame = pd.read_sql_query(
-        "select distinct [ID USER] groupe from "
-        + config["table"]["client"]["nom_table"],
-        conn,
+    request: Request = (
+        Request(distinct=True)
+        .add_selector("client.{}".format(config["table"]["client"]["groupe"]), "groupe")
+        .add_table(config["table"]["client"]["nom_table"], "client")
+        .set_order_by("groupe")
     )
+
+    data: pd.DataFrame = request.run(conn)
+
     return list(data["groupe"])
 
 
@@ -269,24 +288,25 @@ def get_client(
     group: Union[str, None] = None,
 ) -> List[str]:
 
-    if group is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct client.[NOM CLIENT FACTURE] Nom_Client from "
-            + config["table"]["client"]["nom_table"]
-            + " client ",
-            conn2,
+    request: Request = (
+        Request(distinct=True)
+        .add_selector(
+            "client.{}".format(config["table"]["client"]["nom"]), "Nom_Client"
         )
-        return list(data["Nom_Client"])
-
-    data: pd.DataFrame = pd.read_sql_query(
-        "select distinct client.[NOM CLIENT FACTURE] Nom_Client from "
-        + config["table"]["client"]["nom_table"]
-        + " client"
-        + " where client.[ID USER] = '"
-        + group
-        + "'",
-        conn2,
+        .add_table(config["table"]["client"]["nom_table"], "client")
+        .set_order_by("Nom_Client")
     )
+
+    if group is not None:
+        request.add_condition(
+            Condition(
+                "client.{} = '{}'".format(config["table"]["client"]["groupe"], group),
+                "AND",
+            )
+        )
+
+    data: pd.DataFrame = request.run(conn2)
+
     return list(data["Nom_Client"])
 
 
@@ -298,13 +318,17 @@ def get_type_energie(
     """Documentation
     On selectionne les types d'energie sans prendre en considération les autres filtres
     """
-
-    data: pd.DataFrame = pd.read_sql_query(
-        "select distinct cpt.[TYPE ENERGIE] Type_Energie from "
-        + config["table"]["compteur"]["nom_table"]
-        + " cpt ",
-        conn2,
+    request: Request = (
+        Request(distinct=True)
+        .add_selector(
+            "cpt.{}".format(config["table"]["compteur"]["type_energie"]), "Type_Energie"
+        )
+        .add_table(config["table"]["compteur"]["nom_table"], "cpt")
+        .set_order_by("Type_Energie")
     )
+
+    data: pd.DataFrame = request.run(conn2)
+
     return list(data["Type_Energie"])
 
 
@@ -314,41 +338,46 @@ def get_batiment(
     name_client: Union[str, None] = None,
     group: Union[str, None] = None,
 ) -> List[str]:
-    # Cas Aucune préselection
-    if name_client is None and group is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct Nom_Batiment from "
-            + config["table"]["batiment"]["nom_table"],
-            conn,
-        )
-        return list(data["Nom_Batiment"])
 
-    if name_client is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select distinct Nom_Batiment from "
-            + config["table"]["batiment"]["nom_table"]
-            + " bat, "
-            + config["table"]["client"]["nom_table"]
-            + " client where '"
-            + group
-            + "' = client.[ID USER]"
-            + " and bat.Réfclient = client.Réfclient",
-            conn2,
+    request: Request = (
+        Request(distinct=True)
+        .add_selector(
+            "bat.{}".format(config["table"]["batiment"]["nom"]), "Nom_Batiment"
         )
-        return list(data["Nom_Batiment"])
-
-    # Cas client selectionné
-    data: pd.DataFrame = pd.read_sql_query(
-        "select distinct bat.Nom_Batiment from "
-        + config["table"]["batiment"]["nom_table"]
-        + " bat, "
-        + config["table"]["client"]["nom_table"]
-        + " client where '"
-        + name_client
-        + "' = client.[NOM CLIENT FACTURE]"
-        + " and bat.Réfclient = client.Réfclient",
-        conn2,
+        .add_table(config["table"]["batiment"]["nom_table"], "bat")
+        .set_order_by("Nom_Batiment")
     )
+
+    if group is not None or name_client is not None:
+        # Ajout de la jointure entre les deux tables
+        request.add_table(
+            config["table"]["client"]["nom_table"], "client"
+        ).add_condition(
+            Condition(
+                "bat.{} = client.{}".format(
+                    config["table"]["batiment"]["ref_client"],
+                    config["table"]["client"]["ref"],
+                ),
+                "AND",
+            ),
+        )
+
+    if group is not None:
+        request.add_condition(
+            Condition(
+                "client.{} = '{}'".format(config["table"]["client"]["groupe"], group)
+            )
+        )
+
+    if name_client is not None:
+        request.add_condition(
+            Condition(
+                "client.{} = '{}'".format(config["table"]["client"]["nom"], name_client)
+            )
+        )
+
+    data: pd.DataFrame = request.run(conn2)
+
     return list(data["Nom_Batiment"])
 
 
@@ -371,20 +400,39 @@ def get_data(
     if type(id_cpt) != list:
         id_cpt = [id_cpt]
 
-    # Requete sur la base classique
-    data: pd.DataFrame = pd.read_sql_query(
-        "select * from "
-        + config["table"]["histo"]["nom_table"]
-        + " where TS >= '"
-        + startDate.strftime("%d/%m/%Y")
-        + "' and TS <= '"
-        + endDate.strftime("%d/%m/%Y")
-        + "' and Id_CPT in ('"
-        + "','".join(id_cpt)
-        + "')"
-        + " order by TS, Id_CPT",
-        conn,
+    request: Request = (
+        Request()
+        .add_selector("*")
+        .add_table(config["table"]["histo"]["nom_table"])
+        .add_condition(
+            Condition(
+                "{} >= '{}'".format(
+                    config["table"]["histo"]["temps"], startDate.strftime("%d/%m/%Y")
+                )
+            )
+        )
+        .add_condition(
+            Condition(
+                "{} >= '{}'".format(
+                    config["table"]["histo"]["temps"], endDate.strftime("%d/%m/%Y")
+                )
+            )
+        )
+        .add_condition(
+            Condition(
+                "{} in ('{}')".format(
+                    config["table"]["histo"]["id_cpt"], "','".join(id_cpt)
+                )
+            )
+        )
+        .set_order_by(
+            "{}, {}".format(
+                config["table"]["histo"]["temps"], config["table"]["histo"]["id_cpt"]
+            )
+        )
     )
+
+    data: pd.DataFrame = request.run(conn)
 
     return data
 
@@ -485,12 +533,36 @@ FACTURATION_DATE: pd.DataFrame = None
 def get_facturation_date():
     global FACTURATION_DATE
     if FACTURATION_DATE is None:
-        data: pd.DataFrame = pd.read_sql_query(
-            "select Year(Date) Annee, Month(Date) Mois, Day(Date) Jour from "
-            + config["table"]["base_temps"]["nom_table"]
-            + " where date_de_facturation = 'date facturation' order by Date",
-            conn,
+        request: Request = (
+            Request()
+            .add_selector(
+                "Year({})".format(config["table"]["base_temps"]["date"]), "Annee"
+            )
+            .add_selector(
+                "Month({})".format(config["table"]["base_temps"]["date"]), "Mois"
+            )
+            .add_selector(
+                "Day({})".format(config["table"]["base_temps"]["date"]), "Jour"
+            )
+            .add_table(config["table"]["base_temps"]["nom_table"])
+            .add_condition(
+                Condition(
+                    "{} = '{}'".format(
+                        config["table"]["base_temps"]["type"], "date facturation"
+                    )
+                )
+            )
+            .set_order_by(config["table"]["base_temps"]["date"])
         )
+
+        data: pd.DataFrame = request.run(conn)
+
+        # data: pd.DataFrame = pd.read_sql_query(
+        #     "select Year(Date) Annee, Month(Date) Mois, Day(Date) Jour from "
+        #     + config["table"]["base_temps"]["nom_table"]
+        #     + " where date_de_facturation = 'date facturation' order by Date",
+        #     conn,
+        # )
 
         data = data.apply(pd.to_numeric)
         FACTURATION_DATE = data

@@ -710,6 +710,9 @@ def dashboard_manager(
             ].values
         )
 
+        if trigger["value"] is None:
+            outputs["date-facturation-start-jour"]["options"] = value_to_dropdown([])
+
         return outputs
 
     if trigger["id"] == "date-facturation-start-mois.value":
@@ -747,6 +750,9 @@ def dashboard_manager(
                 "Mois"
             ].values
         )
+
+        if trigger["value"] is None:
+            outputs["date-facturation-end-jour"]["options"] = value_to_dropdown([])
 
         return outputs
 

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pandas as pd
+import pyodbc
+
 REQUEST_TYPE_SELECT = "SELECT"
 REQUEST_DISTINCT = "DISTINCT"
 REQUEST_WHERE = "WHERE"
@@ -8,7 +11,7 @@ REQUEST_OR = "OR"
 
 
 class Condition:
-    def __init__(self, value, operator) -> None:
+    def __init__(self, value: str, operator: str = "AND") -> None:
         self.sub_cond: list[Condition] = []
         self.value: str = value
         self.operator: str = operator
@@ -39,8 +42,9 @@ class Request:
         self.type = type
         self.conditions: list[Condition] = []
         self.is_distinct = distinct
-        self.selector: list[str] = []
+        self.selector: list[(str, str)] = []
         self.tables: list[(str, str)] = []
+        self.order: str = ""
 
     def add_table(self, table, alias=None) -> Request:
         """Documentation
@@ -54,7 +58,7 @@ class Request:
 
         return self
 
-    def add_selector(self, selector: str) -> Request:
+    def add_selector(self, selector: str, alias=None) -> Request:
         """Documentation
         Ajoute une selection par exemple * pour faire un select *
 
@@ -62,7 +66,7 @@ class Request:
             selector: chaine de caractere correspondant a la colonne a sélectionner
 
         """
-        self.selector.append(selector)
+        self.selector.append((selector, alias))
 
         return self
 
@@ -75,9 +79,24 @@ class Request:
             Value: une condition ex: "type = eau"
             operator: and/or pour le calcul
         """
+        if type(cond) != Condition:
+            raise "ERROR - Ce n'est pas un type condition"
+
         self.conditions.append(cond)
 
         return self
+
+    def set_order_by(self, ordre: str) -> Request:
+        self.order = " ORDER BY " + ordre
+        return self
+
+    def reset_order_by(self) -> Request:
+        self.order = ""
+        return self
+
+    def run(self, connexion: pyodbc.Connection) -> pd.DataFrame:
+        print(str(self))
+        return pd.read_sql_query(str(self), connexion)
 
     def __str__(self) -> str:
         out: str = ""
@@ -88,10 +107,14 @@ class Request:
             out += REQUEST_DISTINCT
             out += " "
 
-        out += self.selector[0]
-        for select in self.selector[1:]:
+        out += self.selector[0][0]
+        if self.selector[0][1] is not None:
+            out += " " + self.selector[0][1]
+        for select, alias in self.selector[1:]:
             out += ", "
             out += select
+            if alias is not None:
+                out += " " + alias
 
         out += " from "
         out += self.tables[0][0]
@@ -105,9 +128,12 @@ class Request:
             if alias is not None:
                 out += " " + alias
 
-        out += " where 1=1 "
+        if len(self.conditions) > 0:
+            out += " where 1=1"
         for cond in self.conditions:
             out += str(cond)
+
+        out += self.order
 
         # out += ";"
         return out
@@ -125,8 +151,9 @@ if __name__ == "__main__":
 
     rq = (
         Request()
-        .add_selector("*")
+        .add_selector("client.ID", "groupe")
         .add_table("Test.dbo.historique", "histo")
+        .add_table("TABLE2222222222", "tab2")
         .add_condition(test)
         .add_condition(test2)
     )
