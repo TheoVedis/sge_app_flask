@@ -59,12 +59,6 @@ config: Dict[str, Dict[str, str]] = {
     }
 }
 
-# TODO changer tout les requetes sous la forme:
-"""
-"select client.{} 
-    from {} client
-    where client.{} = {}".format(config[..], config[..], config[..])
-"""
 
 # SQL Server
 # config: Dict[str, Dict[str, str]] = {

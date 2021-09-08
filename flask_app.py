@@ -97,12 +97,6 @@ def login():
     """
     error = None
 
-    #### TODO Enlever l'auto log
-    # print("############### A ENLEVER ################### - Auto log")
-    # session["is_logged"] = True
-    # session["username"] = "test"
-    ############################
-
     if is_logged(current_user):
         return index()
 
@@ -192,29 +186,29 @@ layout_main = html.Div(
                         dcc.Dropdown(
                             id="select-groupe",
                             multi=False,
-                            placeholder="Select groupe...",
+                            placeholder="Selection groupe...",
                             value=None,
                         ),
                         dcc.Dropdown(
                             id="select-client",
                             multi=False,
-                            placeholder="Select client...",
+                            placeholder="Selection client...",
                             value=None,
                         ),
                         dcc.Dropdown(
                             id="select-type",
                             multi=False,
-                            placeholder="Select type d'energie...",
+                            placeholder="Selection type d'energie...",
                         ),
                         dcc.Dropdown(
                             id="select-bat",
                             multi=False,
-                            placeholder="Select batiment...",
+                            placeholder="Selection batiment...",
                         ),
                         dcc.Dropdown(
                             id="select-id_cpt",
-                            multi=False,
-                            placeholder="Select compteur...",
+                            multi=True,
+                            placeholder="Selection compteurs...",
                         ),  # multi=False signifie un seul compteur selectionnable a la fois
                         dcc.Dropdown(
                             id="select-periode",
@@ -688,7 +682,6 @@ def dashboard_manager(
     # Selection d'un compteur
     if trigger["id"] == "select-id_cpt.value":
         if trigger["value"] is not None and not trigger["value"] == []:
-            # TODO update les autres filtres
             pass
         raise PreventUpdate
 
@@ -814,7 +807,6 @@ def disconnect(outputs: Dict[str, Dict[str, Any]], inputs: Dict[str, Dict[str, A
     if inputs["disconnect-btn"]["n_clicks"] == 0:
         raise PreventUpdate
 
-    # TODO l'action de la deconnexion
     # Redirection
     outputs["url"]["pathname"] = "/login"
     logout_user()
