@@ -122,6 +122,7 @@ def graph(
     data: pd.DataFrame,
     x: str = "TS",
     y: str = "Value",
+    dju: bool = False,
     title: str = "Valeur des compteurs",
     xlabel: str = "Date (heure)",
     ylabel: str = "Valeur",
@@ -135,6 +136,7 @@ def graph(
         data: Dataframe des données associé a chaque compteurs
         x: La variable en abscisse (par defaut TS: le temps)
         y: La variable en hauteur ()
+        dju: True / False si le graph affiche les index en fonction des dju ou pas
         title: Le titre du graphique
         xlabel: Le label sur l'axe X
         ylabel: Le label sur l'axe Y
@@ -151,6 +153,13 @@ def graph(
 
     for id in id_cpt:
         sub_data = data[data["Id_CPT"] == id]
+
+        if dju:
+            x = "DJU"
+            xlabel = "DJU"
+            min_dju = min(sub_data["DJU"])
+            sub_data["DJU"] -= min_dju
+
         fig.add_trace(
             go.Scatter(
                 x=sub_data[x],
@@ -178,7 +187,7 @@ def graph(
         )
 
     fig.update_layout(
-        title=title,
+        title=title + " (" + ", ".join(id_cpt) + ")",
         xaxis_title=xlabel,
         yaxis_title=ylabel,
         legend_title="Id Compteur:",

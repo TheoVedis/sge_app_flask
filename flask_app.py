@@ -235,6 +235,17 @@ layout_main = html.Div(
                             display_format="DD/MM/YYYY",
                             first_day_of_week=1,
                         ),
+                        dcc.Dropdown(
+                            id="select-graph-axe",
+                            multi=False,
+                            options=[
+                                {"label": "DJU", "value": "dju"},
+                                {"label": "Temps", "value": "temps"},
+                            ],
+                            searchable=False,
+                            clearable=False,
+                            value="temps",
+                        ),
                         html.Button(id="filtre-valid", children="valider"),
                         html.P(
                             id="warning-date-facturation",
@@ -473,6 +484,7 @@ inputs = [
 ]
 states = [
     State("select-periode", "value"),
+    State("select-graph-axe", "value"),
     State("table", "data"),
     State("table", "filter_query"),
     # State("table2", "data"),
@@ -849,6 +861,8 @@ def valid_filter(outputs: Dict[str, Dict[str, Any]], inputs: Dict[str, Dict[str,
         inputs["date-range-picker"]["end_date"], "%Y-%m-%d"
     )
 
+    is_dju: bool = "dju" == inputs["select-graph-axe"]["value"]
+
     # Tab 1:
     if inputs["tabs"]["value"] == "tab1":
         data: pd.DataFram = get_data(
@@ -857,7 +871,7 @@ def valid_filter(outputs: Dict[str, Dict[str, Any]], inputs: Dict[str, Dict[str,
             end_date,
         )
         outputs["graph"]["figure"] = graph(
-            inputs["select-id_cpt"]["value"], data, mode="markers"
+            inputs["select-id_cpt"]["value"], data, mode="markers", dju=is_dju
         )
 
         # Tableau

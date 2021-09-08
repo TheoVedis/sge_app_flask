@@ -2,6 +2,7 @@ from typing import Dict, List, Union
 import pyodbc
 import pandas as pd
 import datetime
+import json
 
 from package.request_manager import Request, Condition
 
