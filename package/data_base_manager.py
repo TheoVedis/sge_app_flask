@@ -176,7 +176,11 @@ def get_id_cpt(
     return list(data["Id_CPT"])
 
 
-def get_groupe():
+def get_groupe() -> List[str]:
+    """Documentation
+    Récupère la liste des groupes
+    """
+
     request: Request = (
         Request(distinct=True)
         .add_selector("client.{}".format(config["table"]["client"]["groupe"]), "groupe")
@@ -195,6 +199,9 @@ def get_client(
     type_energie: Union[str, None] = None,
     group: Union[str, None] = None,
 ) -> List[str]:
+    """Documentation
+    Récupère la liste des clients en fonction du groupe sélectionné
+    """
 
     request: Request = (
         Request(distinct=True)
@@ -246,6 +253,9 @@ def get_batiment(
     name_client: Union[str, None] = None,
     group: Union[str, None] = None,
 ) -> List[str]:
+    """Documentation
+    Récupère les noms de batiments en fonction du groupe et des clients sélectionnés
+    """
 
     request: Request = (
         Request(distinct=True)
@@ -438,7 +448,15 @@ def get_conso(
 FACTURATION_DATE: pd.DataFrame = None
 
 
-def get_facturation_date():
+def get_facturation_date() -> pd.DataFrame:
+    """Documentation
+    Cette fonction renvoies les dates de facturation,
+    elles sont récupéré de la BD une fois à chaque redémarage de l'application
+
+    Sortie:
+        FACTURATION_DATE: Liste des dates de facturation
+
+    """
     global FACTURATION_DATE
     if FACTURATION_DATE is None:
         request: Request = (
@@ -464,14 +482,6 @@ def get_facturation_date():
         )
 
         data: pd.DataFrame = request.run(conn)
-
-        # data: pd.DataFrame = pd.read_sql_query(
-        #     "select Year(Date) Annee, Month(Date) Mois, Day(Date) Jour from "
-        #     + config["table"]["base_temps"]["nom_table"]
-        #     + " where date_de_facturation = 'date facturation' order by Date",
-        #     conn,
-        # )
-
         data = data.apply(pd.to_numeric)
         FACTURATION_DATE = data
 

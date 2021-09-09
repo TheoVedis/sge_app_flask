@@ -11,6 +11,10 @@ REQUEST_OR = "OR"
 
 
 class Condition:
+    """Documentation
+    Cette classe représente une condition dans une requete
+    """
+
     def __init__(self, value: str, operator: str = "AND") -> None:
         self.sub_cond: list[Condition] = []
         self.value: str = value
@@ -18,10 +22,16 @@ class Condition:
         pass
 
     def add_condition(self, cond: Condition):
+        """Documentation
+        Permet d'ajouter des conditions emboitées
+        """
         self.sub_cond.append(cond)
         return self
 
     def __str__(self) -> str:
+        """Documentation
+        Renvoie la condition en forme
+        """
         out: str = " "
 
         out += self.operator
