@@ -5,103 +5,16 @@ import datetime
 import json
 
 from package.request_manager import Request, Condition
+from pathlib import Path
+
+CONFIG_PATH = str(Path(__file__).parent.parent) + r"\config.json"
+
+with open(CONFIG_PATH, "r") as f:
+    config = json.load(f)
 
 # Param de connection
-conn: pyodbc.Connection = pyodbc.connect(
-    "driver={SQL Server};"
-    "server=SGE-PC-107;"
-    "DATABASE=Test;"
-    "Trusted_Connection=yes;"
-)
-
-conn2: pyodbc.Connection = conn
-
-# Test Local
-config: Dict[str, Dict[str, str]] = {
-    "table": {
-        "client": {
-            "nom_table": "Test.dbo.Liste_Clients",
-            "ref": "REF_CLIENT",
-            "id": "[N_CLIENT_FACTURE]",
-            "nom": "[NOM CLIENT FACTURE]",
-            "groupe": "[ID USER]",
-            "acces": "[ACCES_WEB]",
-            "mot_de_passe": "[PWD]",
-        },
-        "compteur": {
-            "nom_table": "Test.dbo.Compteurs",
-            "id_cpt": "[ID_CPT]",
-            "id_client": "[ID_CLIENT]",
-            "nom_batiment": "[BATIMENTS_COMPTES]",
-            "type_energie": "[TYPE ENERGIE]",
-        },
-        "batiment": {
-            "nom_table": "Test.dbo.Batiments",
-            "ref": "REF_BATIMENT",
-            "ref_client": "REF_CLIENT",
-            "nom": "NOM_BATIMENT",
-        },
-        "histo": {
-            "nom_table": "Test.dbo.Histo",
-            "temps": "TS",
-            "id_cpt": "ID_CPT",
-            "anomalie": "ANOMALIE",
-            "DJU": "DJU",
-            "type_anomalie": "TYPE_ANOMALIE",
-            "index_corrige": "INDEX_CORRIGE",
-            "valeur": "VALUE",
-        },
-        "base_temps": {
-            "nom_table": "Test.dbo.Base_temps",
-            "type": "DATE_DE_FACTURATION",
-            "date": "DATE",
-        },
-    }
-}
-
-
-# SQL Server
-# config: Dict[str, Dict[str, str]] = {
-#     "table": {
-#         "client": {
-#             "nom_table": "Access_SGE.dbo.Liste_Clients",
-#             "ref": "REF_CLIENT",
-#             "id": "[N_CLIENT_FACTURE]",
-#             "nom": "[NOM CLIENT FACTURE]",
-#             "groupe": "[ID USER]",
-#             "acces": "[ACCES_WEB]",
-#             "mot_de_passe": "[PWD]",
-#         },
-#         "compteur": {
-#             "nom_table": "Access_SGE.dbo.Compteurs",
-#             "id_cpt": "[ID_CPT]",
-#             "id_client": "[ID_CLIENT]",
-#             "nom_batiment": "BATIMENTS_COMPTES",
-#             "type_energie": "[TYPE ENERGIE]",
-#         },
-#         "batiment": {
-#             "nom_table": "Access_SGE.dbo.Batiments",
-#             "ref": "REF_BATIMENT",
-#             "ref_client": "REF_CLIENT",
-#             "nom": "NOM_BATIMENT",
-#         },
-#         "histo": {
-#             "nom_table": "BigData.dbo.Table_Index_Histo",
-#             "temps": "TS",
-#             "id_cpt": "ID_CPT",
-#             "anomalie": "ANOMALIE",
-#             "DJU": "DJU",
-#             "type_anomalie": "TYPE_ANOMALIE",
-#             "index_corrige": "INDEX_CORRIGE",
-#             "valeur": "VALUE",
-#         },
-#         "base_temps": {
-#             "nom_table": "BigData.dbo.Base_TempsSGE",
-#             "type": "DATE_DE_FACTURATION",
-#             "date": "DATE",
-#         },
-#     }
-# }
+conn = pyodbc.connect(config["connexion"]["big_data"])
+conn2 = pyodbc.connect(config["connexion"]["access"])
 
 
 def get_login_pwd() -> pd.DataFrame:

@@ -1,0 +1,45 @@
+{
+    "connexion": {
+        "big_data": "driver={SQL Server};server=SGE-PC-107;DATABASE=Test;Trusted_Connection=yes;",
+        "access": "driver={SQL Server};server=SGE-PC-107;DATABASE=Test;Trusted_Connection=yes;"
+    },
+    "table": {
+        "client": {
+            "nom_table": "Test.dbo.Liste_Clients",
+            "ref": "REF_CLIENT",
+            "id": "[N_CLIENT_FACTURE]",
+            "nom": "[NOM CLIENT FACTURE]",
+            "groupe": "[ID USER]",
+            "acces": "[ACCES_WEB]",
+            "mot_de_passe": "[PWD]"
+        },
+        "compteur": {
+            "nom_table": "Test.dbo.Compteurs",
+            "id_cpt": "[ID_CPT]",
+            "id_client": "[ID_CLIENT]",
+            "nom_batiment": "[BATIMENTS_COMPTES]",
+            "type_energie": "[TYPE ENERGIE]"
+        },
+        "batiment": {
+            "nom_table": "Test.dbo.Batiments",
+            "ref": "REF_BATIMENT",
+            "ref_client": "REF_CLIENT",
+            "nom": "NOM_BATIMENT"
+        },
+        "histo": {
+            "nom_table": "Test.dbo.Histo",
+            "temps": "TS",
+            "id_cpt": "ID_CPT",
+            "anomalie": "ANOMALIE",
+            "DJU": "DJU",
+            "type_anomalie": "TYPE_ANOMALIE",
+            "index_corrige": "INDEX_CORRIGE",
+            "valeur": "VALUE"
+        },
+        "base_temps": {
+            "nom_table": "Test.dbo.Base_temps",
+            "type": "DATE_DE_FACTURATION",
+            "date": "DATE"
+        }
+    }
+}
