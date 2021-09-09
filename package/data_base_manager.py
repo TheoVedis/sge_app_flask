@@ -331,7 +331,7 @@ def get_data(
         )
         .add_condition(
             Condition(
-                "{} >= '{}'".format(
+                "{} <= '{}'".format(
                     config["table"]["histo"]["temps"], endDate.strftime("%d/%m/%Y")
                 )
             )
